@@ -245,7 +245,6 @@ const Leads = () => {
     }
   };
 
-
   useEffect(() => {
     userData();
     fetchStatus();
