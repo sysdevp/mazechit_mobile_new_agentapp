@@ -29,6 +29,8 @@ const Collection = () => {
   const [collection, setCollection] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
+  const [refreshing, setRefreshing] = useState(false);
+
   const baseUrl = COMMON.BaseUrl;
   const DbName = COMMON.DbName;
 
@@ -116,121 +118,15 @@ const Collection = () => {
       }
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   };
 
   // ---------------- Refresh Handler ----------------
-
-  const syncOfflineReceipts = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(OFFLINE_RECEIPTS_KEY);
-      if (!stored) return;
-
-      let receipts = JSON.parse(stored);
-      if (!receipts.length) {
-        Dialog.show({
-          type: ALERT_TYPE.INFO,
-          title: 'No Pending Data',
-          textBody: 'No offline receipts to sync',
-          button: 'OK',
-        });
-        return;
-      }
-
-      const syncedIds: number[] = [];
-
-      for (const receipt of receipts) {
-        try {
-          await axios.post(
-            `${COMMON.BaseUrl}/store-customer-advance-receipt`,
-            receipt,
-          );
-          syncedIds.push(receipt.offline_id);
-        } catch (e) {
-          console.log('Still offline', receipt.offline_id);
-          console.log('Still offline', e);
-        }
-      }
-
-      receipts = receipts.filter(
-        (r: any) => !syncedIds.includes(r.offline_id),
-      );
-
-      await AsyncStorage.setItem(
-        OFFLINE_RECEIPTS_KEY,
-        JSON.stringify(receipts),
-      );
-
-      if (syncedIds.length) {
-        Dialog.show({
-          type: ALERT_TYPE.SUCCESS,
-          title: 'Sync Complete',
-          textBody: `${syncedIds.length} receipt(s) synced`,
-          button: 'OK',
-        });
-      }
-    } catch (e) {
-      console.log('Sync error', e);
-    }
-  };
-
-  const syncOfflineReportReceipts = async () => {
-    try {
-      const stored = await AsyncStorage.getItem(
-        'offline_report_receipts',
-      );
-      if (!stored) return;
-
-      let receipts = JSON.parse(stored);
-      if (!receipts.length) return;
-
-      const syncedIds: number[] = [];
-
-      for (const receipt of receipts) {
-        try {
-          await axios.post(
-            `${COMMON.BaseUrl}/mobile-add-receipt`,
-            null,
-            { params: receipt },
-          );
-
-          syncedIds.push(receipt.offline_id);
-        } catch (e) {
-          console.log(
-            'Still offline for report receipt',
-            receipt.offline_id,
-          );
-          console.log(e)
-        }
-      }
-
-      receipts = receipts.filter(
-        (r: any) => !syncedIds.includes(r.offline_id),
-      );
-
-      await AsyncStorage.setItem(
-        'offline_report_receipts',
-        JSON.stringify(receipts),
-      );
-
-      if (syncedIds.length) {
-        Dialog.show({
-          type: ALERT_TYPE.SUCCESS,
-          title: 'Sync Completed',
-          textBody: `${syncedIds.length} report receipt(s) synced`,
-          button: 'OK',
-        });
-      }
-    } catch (e) {
-      console.log('Report sync error', e);
-    }
-  };
-
-  const onRefresh = async () => {
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
     fetchCollections();
-    await syncOfflineReceipts();
-    await syncOfflineReportReceipts();
-  };
+  }, []);
 
   const filteredCollection = collection?.length > 0 && collection?.filter(c =>
     c.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
@@ -334,6 +230,8 @@ const Collection = () => {
         data={filteredCollection}
         keyExtractor={(_, index) => index.toString()}
         contentContainerStyle={{ paddingBottom: 40, flexGrow: 1 }}
+        refreshing={refreshing}
+        onRefresh={onRefresh}
         ListEmptyComponent={
           <View style={{ alignItems: 'center', marginTop: 40 }}>
             <Text style={{ fontSize: 16, color: '#888' }}>

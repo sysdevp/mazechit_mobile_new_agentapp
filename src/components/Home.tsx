@@ -8,6 +8,7 @@ import {
   TouchableOpacity,
   Modal,
   TextInput,
+  RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
@@ -125,6 +126,8 @@ const Home = () => {
 
   const [notifications, setNotifications] = useState<any[]>([])
 
+  const [refreshing, setRefreshing] = useState(false);
+
   // ========== Attendance Status Fetch ==========
   const attendanceStatusFetch = async () => {
     try {
@@ -211,6 +214,7 @@ const Home = () => {
 
     } catch (error) {
       console.log('API failed — trying cache');
+      setNotifications([...notifications, { id: notifications.length, title: `You're Offline Please check the internet connection...` }])
 
       try {
         const cached = await AsyncStorage.getItem(DASHBOARD_CACHE_KEY);
@@ -229,6 +233,7 @@ const Home = () => {
 
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -617,7 +622,7 @@ const Home = () => {
 
       await AsyncStorage.setItem('cashInHand', JSON.stringify(res));
 
-      console.log('Cash In Hand', res); 
+      console.log('Cash In Hand', res);
       return;
     } catch (error) {
       console.error('Error fetching CIH:', error);
@@ -649,6 +654,17 @@ const Home = () => {
       console.log('Sync error', e);
     }
   };
+
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+
+    // 🔁 API call / reload logic
+    fetchDashboard();
+
+    // setTimeout(() => {
+    //   setRefreshing(false);
+    // }, 2000);
+  }, []);
 
   useEffect(() => {
     attendanceStatusFetch();
@@ -709,7 +725,19 @@ const Home = () => {
       <IncomeCards incomeCardsData={incomeCardsData} />
 
       {activeTab === 'balance' && (
-        <ScrollView>
+        <ScrollView
+          style={{ flex: 1 }}
+          contentContainerStyle={{ flexGrow: 1 }}
+          refreshControl={
+            <RefreshControl
+              refreshing={refreshing}
+              onRefresh={onRefresh}
+              colors={['#00E0FF']}   // Android
+              tintColor="#fff"      // iOS
+            />
+          }
+        >
+
           <View>
             {/* BALANCE CARD */}
             <TouchableOpacity onPress={() => navigation.navigate('Settlement')}>

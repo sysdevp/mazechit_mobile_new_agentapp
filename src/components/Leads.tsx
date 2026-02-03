@@ -10,6 +10,7 @@ import {
   Platform,
   UIManager,
   TouchableOpacity,
+  RefreshControl,
 } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Icon from 'react-native-vector-icons/Ionicons';
@@ -54,6 +55,8 @@ const Leads = () => {
   const [branchData, setBranchData] = useState<any[]>();
 
   const [leadStatus, setLeadStatus] = useState<any[]>([]);
+
+  const [refreshing, setRefreshing] = useState(false);
 
   const baseUrl = COMMON.BaseUrl;
   const DbName = COMMON.DbName;
@@ -232,6 +235,7 @@ const Leads = () => {
       }
     } finally {
       setIsLoading(false);
+      setRefreshing(false);
     }
   };
 
@@ -260,6 +264,12 @@ const Leads = () => {
     }, [userId]),
   );
 
+  // ---------------- Refresh Handler ----------------
+  const onRefresh = useCallback(() => {
+    setRefreshing(true);
+    loadCachedLeads();
+    fetchLeads();
+  }, []);
 
   if (isLoading) {
     return <ListHeaderSkeleton />;
@@ -309,7 +319,19 @@ const Leads = () => {
       </View>
 
       {/* RECEIPT CARDS */}
-      <ScrollView contentContainerStyle={{ paddingBottom: 20 }}>
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ flexGrow: 1, paddingBottom: 20 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            colors={['#00E0FF']}   // Android
+            tintColor="#fff"      // iOS
+          />
+        }
+      >
+        {/* <ScrollView contentContainerStyle={{ paddingBottom: 20 }}> */}
         {filteredLeads.length > 0 &&
           filteredLeads
             .filter(
