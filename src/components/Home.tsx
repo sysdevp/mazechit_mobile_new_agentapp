@@ -931,7 +931,7 @@ const AttendanceCard = ({
         setPre((pre: any) => pre + 1);
         await saveAttendanceStatus('present');
 
-        setNotifications([...notifications, { id: notifications.length, title: `Attendance status updates: Present` }])
+        setNotifications([...notifications, { id: notifications.length, title: `Attendance status updated: Present` }])
 
         // setNotifications([...notifications, { id: 'notify', title: "Attendance status updates: Present" }])
       } else {
@@ -939,7 +939,7 @@ const AttendanceCard = ({
         onSubmit('absent')
         await saveAttendanceStatus('absent');
 
-        setNotifications([...notifications, { id: notifications.length, title: `Attendance status updates: Absent` }])
+        setNotifications([...notifications, { id: notifications.length, title: `Attendance status updated: Absent` }])
 
         // setNotifications([...notifications, { id: 'notify', title: "Attendance status updates: Absent" }])
       }

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import { View, Text, StyleSheet, Image, Pressable, Switch } from 'react-native';
 import Feather from 'react-native-vector-icons/Feather';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
@@ -133,7 +133,7 @@ const NavItems = ({ navigation, state }: DrawerContentComponentProps) => {
   };
 
 
-  React.useEffect(() => {
+  useEffect(() => {
     userData()
   }, [])
 
