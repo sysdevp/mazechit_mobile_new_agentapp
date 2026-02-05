@@ -191,6 +191,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    paddingTop: 8
   },
 
   badgeWrapper: {
@@ -213,7 +214,7 @@ const styles = StyleSheet.create({
 
   /* STATUS BADGE */
   statusBadge: {
-    paddingVertical: 6,
+    paddingVertical: 2,
     paddingHorizontal: 12,
     borderRadius: 20,
     borderWidth: 1,

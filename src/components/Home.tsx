@@ -122,6 +122,8 @@ const Home = () => {
 
   const [cashInHand, setCashInHand] = useState<string>();
 
+  const [isAttendanceMarked, setIsAttendanceMarked] = useState(0);
+
   const [isLocation, setIsLocation] = useState<boolean>(false);
 
   const [notifications, setNotifications] = useState<any[]>([])
@@ -314,8 +316,12 @@ const Home = () => {
     setCollectionChart(lineData);
     setMaxValue(res.maxValue);
 
+    setIsAttendanceMarked(res.isAttendanceMarked)
+
     setCashInHand(res.cashInHand)  // Case In Hand from Cache
   };
+
+  console.log("Attendance status Check", isAttendanceMarked)
 
   // ========== Branck List ==========
 
@@ -363,12 +369,12 @@ const Home = () => {
         },
       );
 
-      const res = response.data.data;
+      const res = response.data;
       setBranch(res);
 
       await AsyncStorage.setItem('bankData', JSON.stringify(res));
 
-      console.log('Lead view Branches', res);
+      console.log('Lead view Banks', res);
       return;
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -718,7 +724,7 @@ const Home = () => {
     <LinearGradient colors={['#061C3F', '#0A5E6A']} style={styles.gradient}>
       <Header attendance={attendanceStatusStored} notifications={notifications} setNotifications={setNotifications} userName={userName} />
       {/* === ATTENDANCE CARD === */}
-      {attendanceStatusStored === '' && (
+      {isAttendanceMarked !== 1 && (
         <AttendanceCard onSubmit={setAttendanceStatus} DbName={DbName} tenantId={tenantId} BaseUrl={baseUrl} user={user} setIsLocation={setIsLocation} isLocation={isLocation} setPre={setPre} setNotifications={setNotifications} notifications={notifications} />
       )}
 

@@ -43,6 +43,7 @@ const ReceiptDetails = () => {
   const [receipts, setReceipts] = useState<any[]>();
   const [user, setUser] = useState();
   const [search, setSearch] = useState<string>('');
+  const [mode, setMode] = useState<string>('');
 
   const baseUrl = COMMON.BaseUrl;
   const dataBase = COMMON.DbName;
@@ -87,6 +88,16 @@ const ReceiptDetails = () => {
       });
 
       const res = response.data;
+
+      const selectedMode = res.payemnt_type;
+
+      if (selectedMode === 'Cheque' || selectedMode === 'D.D') {
+        setMode('chequeOrDd');
+      } else if (selectedMode === 'RTGS/NEFT' || selectedMode === 'Card') {
+        setMode('isRtgsOrCard');
+      } else {
+        setMode('cash');
+      }
 
       setReceipts(Array.isArray(res) ? res : [res]);
     } catch (err) {
@@ -161,16 +172,35 @@ const ReceiptDetails = () => {
       {/* Header Row */}
       <View style={styles.headerRow}>
         <Text style={styles.headerName}>{data.customer_name}</Text>
-        <Text style={styles.headerPhone}>{data.customer_code}</Text>
+        <Text style={styles.headerPhone}>₹ {data.received_amount}</Text>
       </View>
 
       {/* Details */}
+      {renderRow('Mobile Number:', data.customer_code)}
       {renderRow('Mobile Number:', data.mobile_no)}
-      {renderRow('Receipt Date:', data.receipt_date)}
-      {renderRow('Payment Mode:', data.payemnt_type)}
-      {renderRow('Group Name:', data.groupname || 'N/A')}
       {renderRow('Receipt Number:', data.receipt_no)}
-      {renderRow('Amount:', `₹ ${data.received_amount}`)}
+      {renderRow('Receipt Date:', data.receipt_date)}
+      {renderRow('Group/ Ticket No:',`${data.groupname || 'NA'}/ ${data.ticketno || ''}`)}
+      {renderRow('Payment Mode:', data.payemnt_type)}
+
+      {mode === 'chequeOrDd' && (
+        <>
+          {renderRow('Cheque Date:', data.cheque_date)}
+          {renderRow('Cheque No:', data.cheque_no)}
+          {renderRow('Debit Bank:', data.debit_to)}
+          {renderRow('Credit Bank:', data.bank_name)}
+          {renderRow('Credit Branch:', data.branch_name)}
+        </>
+      )}
+      {mode === 'isRtgsOrCard' && (
+        <>
+          {renderRow('Transaction No:', data.transaction_no)}
+          {renderRow('Transaction Date:', data.transaction_date)}
+          {renderRow('Credit Bank:', data.bank_name)}
+          {renderRow('Credit Branch:', data.branch_name)}
+        </>
+      )}
+
     </View>
   );
 

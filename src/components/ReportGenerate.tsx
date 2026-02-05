@@ -22,6 +22,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import CustomDropdown from './custom/CustomDropdown';
 import axios from 'axios';
 import { ALERT_TYPE, Dialog } from 'react-native-alert-notification';
+import CustomDropdownBottom from './custom/CustomDropdownBottom';
 
 const ReportGenerate = () => {
   const OFFLINE_REPORT_RECEIPTS_KEY = 'offline_report_receipts';
@@ -40,11 +41,13 @@ const ReportGenerate = () => {
   const [discountAmount, setDiscountAmount] = useState('');
   const [discountPercent, setDiscountPercent] = useState('');
 
-  const [mode, setMode] = useState<string>();
+  const [mode, setMode] = useState<string>('');
 
   const [selectedMode, setSelectedMode] = useState<string>('cash');
 
   const [modeTypes, setModeTypes] = useState<any[]>([]);
+  const [bankTypes, setBanksTypes] = useState<any[]>([]);
+  const [branchTypes, setBranchTypes] = useState<any[]>([]);
 
   const [user, setUser] = useState<any>();
 
@@ -57,7 +60,7 @@ const ReportGenerate = () => {
   // const [amount, setAmount] = useState('');
 
   // CHEQUE / D.D
-  const [chequeDate, setChequeDate] = useState<Date | null>(null);
+  const [chequeDate, setChequeDate] = useState<Date | null>(new Date());
   const [chequeNo, setChequeNo] = useState('');
   const [debitBank, setDebitBank] = useState('');
   const [creditBank, setCreditBank] = useState('');
@@ -65,7 +68,7 @@ const ReportGenerate = () => {
 
   // RTGS / CARD
   const [transactionNo, setTransactionNo] = useState('');
-  const [transactionDate, setTransactionDate] = useState<Date | null>(null);
+  const [transactionDate, setTransactionDate] = useState<Date | null>(new Date());
 
   const isChequeOrDD = selectedMode === 'cheque' || selectedMode === 'd.d';
 
@@ -184,20 +187,20 @@ const ReportGenerate = () => {
   // Handle received amount input
   const handleAmountChange = (text: string) => {
     setAmount(text);
-  
+
     const amt = parseFloat(text) || 0; // ✅ keep decimals
     let remaining = amt;
-  
+
     const newTable = tableData.map(row => {
       const pendingNum =
         parseFloat(row.pending.replace(/,/g, '')) || 0;
-  
+
       const penaltyWith = parseFloat(row.penaltyWith) || 0;
-  
+
       const totalDue = pendingNum + penaltyWith;
-  
+
       let paying = 0;
-  
+
       if (remaining >= totalDue) {
         paying = totalDue;
         remaining -= totalDue;
@@ -205,16 +208,16 @@ const ReportGenerate = () => {
         paying = remaining;
         remaining = 0;
       }
-  
+
       return {
         ...row,
         paying: Number(paying.toFixed(2)), // ✅ keep 2 decimals
       };
     });
-  
+
     setTableData(newTable);
     setAdvance(Number(remaining.toFixed(2))); // ✅ FIXED
-  
+
     const installmentsPayload = newTable.map(row => ({
       auction_id: row.bidding_id,
       installment_no: Number(row.auction),
@@ -229,15 +232,15 @@ const ReportGenerate = () => {
       penalty_amounts: row.penaltyWithout || 0,
       cancel_dividend_amount: 0,
     }));
-  
+
     setInstallments(installmentsPayload);
   };
-  
+
 
   const totalPaying = tableData.reduce(
     (sum, row) => sum + (parseFloat(row.paying) || 0),
     0
-  );  
+  );
 
   const fetchBranchData = async () => {
     try {
@@ -258,7 +261,45 @@ const ReportGenerate = () => {
     }
   };
 
-  console.log(modeTypes, "Payment types")
+  const fetchBank = async () => {
+    try {
+      const storedDataRaw = await AsyncStorage.getItem('bankData');
+
+      if (!storedDataRaw) return;
+
+      const parsedData = JSON.parse(storedDataRaw);
+      const formattedModes = parsedData.map((item: any) => ({
+        label: item.customer_bank_name,
+        value: item.customer_bank_id,
+      }));
+
+      setBanksTypes(formattedModes);
+    } catch (error) {
+      console.log('Error fetching bankData:', error);
+    }
+  };
+
+  const fetchBranches = async () => {
+    try {
+      const storedData = await AsyncStorage.getItem('branchData');
+
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+
+        const formattedBranches = [
+          // { label: 'All', value: '' },
+          ...parsedData.map((item: any) => ({
+            label: item.branch_name,
+            value: item.branch_id,
+          })),
+        ];
+
+        setBranchTypes(formattedBranches);
+      }
+    } catch (error) {
+      console.log('Error fetching branch data:', error);
+    }
+  };
 
   useEffect(() => {
     // default value
@@ -332,7 +373,6 @@ const ReportGenerate = () => {
       console.log('Error saving offline report receipt', e);
     }
   };
-
 
   const handleSubmit = async () => {
 
@@ -427,6 +467,8 @@ const ReportGenerate = () => {
 
   useEffect(() => {
     fetchBranchData();
+    fetchBranches();
+    fetchBank();
     userData();
   }, []);
 
@@ -483,7 +525,7 @@ const ReportGenerate = () => {
             </View>
             <View style={styles.detailRow}>
               <Text style={styles.label}>To Be Collected</Text>
-              <Text style={styles.value}>₹ {reportData?.pending_amount}</Text>
+              <Text style={[styles.value, {color: '#7CFF78'}]}>₹ {reportData?.pending_amount}</Text>
             </View>
           </View>
           {/* Input – Amount */}
@@ -557,10 +599,10 @@ const ReportGenerate = () => {
               </Text>
               <Text style={[styles.tableCell, { fontWeight: '700' }]}></Text>
               <Text style={[styles.tableCell, { fontWeight: '700' }]}></Text>
-              <Text style={[styles.tableCell, { fontWeight: '700' }]}></Text>
-              <Text style={[styles.tableCell, { fontWeight: '700' }]}></Text>
-              <Text style={[styles.totalTableCell, { fontWeight: '700' }]}>
-              ₹ {totalPaying.toFixed(2)}
+              {/* <Text style={[styles.tableCell, { fontWeight: '700' }]}></Text> */}
+              {/* <Text style={[styles.tableCell, { fontWeight: '700' }]}></Text> */}
+              <Text style={[styles.totalTableCell, { fontWeight: '700', textAlign: 'right', paddingRight: 10 }]}>
+                ₹ {totalPaying.toFixed(2)}
               </Text>
             </View>
           </View>
@@ -622,29 +664,60 @@ const ReportGenerate = () => {
                 keyboardType="numeric"
               />
 
-              <Text style={styles.lable}>Debit Bank</Text>
+              {/* <Text style={styles.lable}>Debit Bank</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Debit Bank"
                 value={debitBank}
                 onChangeText={setDebitBank}
-              />
+              /> */}
 
+              <CustomDropdownBottom
+                label="Debit Bank"
+                placeholder="Select the Bank"
+                value1={debitBank}
+                items={bankTypes}
+                onChangeValue={(v: string | null) => {
+                  setDebitBank(v || '');
+                }}
+              />
+              {/* 
               <Text style={styles.lable}>Credit Bank</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Credit Bank"
                 value={creditBank}
                 onChangeText={setCreditBank}
+              /> */}
+
+              <CustomDropdownBottom
+                label="Credit Bank"
+                placeholder="Select the Bank"
+                value1={creditBank}
+                items={bankTypes}
+                onChangeValue={(v: string | null) => {
+                  setCreditBank(v || '');
+                }}
               />
 
-              <Text style={styles.lable}>Credit Branch</Text>
+              {/* <Text style={styles.lable}>Credit Branch</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Credit Branch"
                 value={creditBranch}
                 onChangeText={setCreditBranch}
+              /> */}
+
+              <CustomDropdownBottom
+                label="Credit Branch"
+                placeholder="Select the Branch"
+                value1={creditBranch}
+                items={branchTypes}
+                onChangeValue={(v: string | null) => {
+                  setCreditBranch(v || '');
+                }}
               />
+
             </>
           )}
 
@@ -678,18 +751,18 @@ const ReportGenerate = () => {
                 />
               )}
               <Pressable
-                style={styles.datePickerButtonSmall}
+                style={[styles.datePickerButtonSmall, {marginBottom: 15}]}
                 onPress={() => setShowTransactionPicker(true)}
               >
                 <Icon name="calendar-outline" size={18} color="#fff" />
                 <Text style={styles.datePickerTextSmall}>
                   {transactionDate
                     ? transactionDate.toDateString()
-                    : 'Select Data'}
+                    :'Select Date'}
                 </Text>
               </Pressable>
 
-              <Text style={styles.lable}>Credit Bank</Text>
+              {/* <Text style={styles.lable}>Credit Bank</Text>
               <TextInput
                 style={styles.input}
                 placeholder="Credit Bank"
@@ -703,6 +776,34 @@ const ReportGenerate = () => {
                 placeholder="Credit Branch"
                 value={creditBranch}
                 onChangeText={setCreditBranch}
+              /> */}
+
+              <CustomDropdownBottom
+                label="Credit Bank"
+                placeholder="Select the Bank"
+                value1={creditBank}
+                items={bankTypes}
+                onChangeValue={(v: string | null) => {
+                  setCreditBank(v || '');
+                }}
+              />
+
+              {/* <Text style={styles.lable}>Credit Branch</Text>
+              <TextInput
+                style={styles.input}
+                placeholder="Credit Branch"
+                value={creditBranch}
+                onChangeText={setCreditBranch}
+              /> */}
+
+              <CustomDropdownBottom
+                label="Credit Branch"
+                placeholder="Select the Branch"
+                value1={creditBranch}
+                items={branchTypes}
+                onChangeValue={(v: string | null) => {
+                  setCreditBranch(v || '');
+                }}
               />
             </>
           )}
@@ -862,7 +963,7 @@ const styles = StyleSheet.create({
   },
   totalTableCell: {
     color: '#7CFF78',
-    width: '16%',
+    width: '30%',
     fontSize: 14,
     textAlign: 'center',
   },

@@ -352,21 +352,32 @@ const ViewReceipts = () => {
               {isExpanded && (
                 <View style={styles.expandArea}>
                   <View style={styles.row}>
+                    <Text style={styles.label}>Customer Code:</Text>
+                    <Text style={styles.value}>{item.customer_code || 'N/A'}</Text>
+                  </View>
+                  <View style={styles.row}>
                     <Text style={styles.label}>Payment Mode:</Text>
-                    <Text style={styles.value}>{item.payment_mode}</Text>
+                    <Text style={styles.value}>{item.payment_mode || 'N/A'}</Text>
                   </View>
                   <View style={styles.row}>
                     <Text style={styles.label}>Receipt No:</Text>
-                    <Text style={styles.value}>{item.receipt_no}</Text>
+                    <Text style={styles.value}>{item.receipt_no || 'N/A'}</Text>
                   </View>
                   <View style={styles.row}>
                     <Text style={styles.label}>Receipt Date:</Text>
-                    <Text style={styles.value}>{item.receipt_date}</Text>
+                    <Text style={styles.value}>{item.receipt_date || 'N/A'}</Text>
                   </View>
                   <View style={styles.row}>
                     <Text style={styles.label}>Receipt Type:</Text>
-                    <Text style={styles.value}>{item.receipt_type}</Text>
+                    <Text style={styles.value}>{item.receipt_type || 'N/A'}</Text>
                   </View>
+                  {/* <View style={styles.row}>
+                    <Text style={styles.label}>Group Name:</Text>
+                    <Text style={styles.value}>{item.groupname || 'N/A'}</Text>
+                  </View> */}
+
+                  {/*
+      {renderRow('Group Name:', data.groupname || 'N/A')}
                   
                   {/* <View style={styles.row}>
                     

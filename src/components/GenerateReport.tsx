@@ -138,7 +138,7 @@ const GenerateReport = () => {
                 {renderGridItem('Due', item.total_installment_count || '-')}
                 {renderGridItem('Pending Due', item.pending_due_count || '-')}
               </View>
-              <View style={styles.btnRow}>
+            <View style={styles.btnRow}>
                 <View>
                   <TouchableOpacity
                     style={styles.linkBtn}
