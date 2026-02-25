@@ -90,6 +90,7 @@ const CollectionFeedbackReport = () => {
     const payload = {
       db: dataBase,
       tenant_id: user?.tenant_id,
+      employee_id: user?.employee_id ,
       branch_id: branch,
       // created_by: 1,
       remark_date: remark_date,

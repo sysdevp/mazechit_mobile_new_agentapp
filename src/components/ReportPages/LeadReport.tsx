@@ -156,6 +156,7 @@ const LeadReport = () => {
     const payload = {
       db: dataBase,
       tenant_id: user?.tenant_id,
+      employee_id: user?.employee_id ,
       branch_id: branch,
       from_date: from_date,
       to_date: to_date,
@@ -540,7 +541,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
-  closeButton: { position: 'absolute', top: 15, right: 15 },
+  closeButton: { position: 'absolute', top: 15, right: 15, zIndex: 10, },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',

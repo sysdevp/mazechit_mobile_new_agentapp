@@ -461,7 +461,7 @@ const styles = StyleSheet.create({
     borderTopRightRadius: 20,
   },
 
-  closeButton: { position: 'absolute', right: 15, top: 15 },
+  closeButton: { position: 'absolute', right: 15, top: 15, zIndex: 10, },
 
   modalTitle: {
     fontSize: 18,

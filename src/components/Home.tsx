@@ -51,7 +51,7 @@ const IncomeCards = ({ incomeCardsData }: { incomeCardsData: any }) => {
           </View>
 
           <View style={styles.textContainer}>
-            <Text style={styles.title}>{item.title}</Text>
+            <Text style={styles.title}>{item.containerName}</Text>
             <Text style={styles.amountText}>{item.amount}</Text>
           </View>
         </TouchableOpacity>
@@ -255,24 +255,28 @@ const Home = () => {
         icon: 'cash',
         color: '#FF8C42',
         isLeft: false,
+        containerName: "Today's Collections"
       },
       'Receipts Generated': {
         route: 'ViewReceipts',
         icon: 'receipt-outline',
         color: '#4F6EF7',
         isLeft: true,
+        containerName: "Receipts Generated"
       },
       'Todays Followup': {
         route: 'todaysFollowUps',
         icon: 'people-outline',
         color: '#7C6AE6',
         isLeft: true,
+        containerName: "Today's Followup"
       },
     };
 
     const preparedCards = res.incomeCardsData.map((item: any) => ({
       ...item,
       route: cardConfig[item.title]?.route || '',
+      containerName: cardConfig[item.title]?.containerName || '',
       icon: cardConfig[item.title]?.icon || 'stats-chart',
       color: cardConfig[item.title]?.color || '#999',
       isLeft: cardConfig[item.title]?.isLeft || false,
@@ -286,6 +290,7 @@ const Home = () => {
       icon: 'sync',
       color: '#F4C430',
       isLeft: false,
+      containerName: "Unsynced Receipts"
     };
 
     preparedCards.splice(2, 0, unsyncedCard);
@@ -652,13 +657,15 @@ const Home = () => {
   const syncOfflineReceipts = async () => {
     try {
       const stored = await AsyncStorage.getItem(OFFLINE_RECEIPTS_KEY);
-      if (!stored) return;
+      const storedReceipts = await AsyncStorage.getItem('offline_report_receipts');
+      if (!stored && !storedReceipts) return;
 
-      let receipts = JSON.parse(stored);
+      let receipts = stored ? JSON.parse(stored) : [];
+      let offlineReceipts = storedReceipts ? JSON.parse(storedReceipts) : [];
 
       console.log("Length Of offline receipts", receipts.length)
 
-      setUnsynced(receipts.length)
+      setUnsynced(receipts.length + offlineReceipts.length)
 
       // {
       //   receipts.length > 0 && (

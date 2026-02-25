@@ -172,7 +172,7 @@ const TodaysFollowUps = () => {
 
   return (
     <LinearGradient colors={['#061C3F', '#0A5E6A']} style={styles.container}>
-      <Header title="Todays Followup" showBack />
+      <Header title="Today's Followup" showBack />
 
       {/* SEARCH */}
       <View style={styles.searchContainer}>

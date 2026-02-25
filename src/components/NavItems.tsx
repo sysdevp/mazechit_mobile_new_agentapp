@@ -8,6 +8,7 @@ import type { DrawerContentComponentProps } from '@react-navigation/drawer';
 import { useNavigationHistory } from '../navigation/NavigationHistoryContext';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ALERT_TYPE, Dialog } from 'react-native-alert-notification';
+import { useFocusEffect } from '@react-navigation/native';
 
 const routeNameToLabel: Record<string, string> = {
   Home: 'Dashboard',
@@ -25,6 +26,8 @@ const NavItems = ({ navigation, state }: DrawerContentComponentProps) => {
   const [selected, setSelected] = React.useState('Dashboard');
   const [isEnabled, setIsEnabled] = React.useState(false);
   const [user, setUser] = React.useState();
+  const hasFetchedUser = React.useRef(false);
+
   const { addToHistory } = useNavigationHistory();
 
   // Handle back button navigation
@@ -123,19 +126,41 @@ const NavItems = ({ navigation, state }: DrawerContentComponentProps) => {
 
   // --- user details fetch ---
 
-  const userData = async () => {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
-    );
+  // const userData = async () => {
+  //   const value = JSON.parse(
+  //     (await AsyncStorage.getItem('loginDetails')) ?? '{}',
+  //   );
 
-    console.log(value);
-    setUser(value);
-  };
+  //   console.log(value);
+  //   setUser(value);
+  // };
 
 
-  useEffect(() => {
-    userData()
-  }, [])
+  // useEffect(() => {
+  //   userData()
+  // }, [])
+
+  const userData = React.useCallback(async () => {
+    try {
+      const raw = await AsyncStorage.getItem('loginDetails');
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        setUser(parsed);
+        hasFetchedUser.current = true;
+      }
+    } catch (error) {
+      console.error('Failed to load user data:', error);
+    }
+  }, []);
+
+  // useFocusEffect ensures data is re-fetched when drawer becomes visible
+  useFocusEffect(
+    React.useCallback(() => {
+      if (!hasFetchedUser.current) {
+        userData();
+      }
+    }, [userData])
+  );
 
   console.log(user, "User Data From Nav Items components")
 
@@ -162,6 +187,7 @@ const NavItems = ({ navigation, state }: DrawerContentComponentProps) => {
       </View>
 
       {/* Profile Section */}
+
       <Pressable
         onPress={() => {
           navigation.navigate('MainTabs', {
@@ -176,8 +202,12 @@ const NavItems = ({ navigation, state }: DrawerContentComponentProps) => {
             source={{ uri: `https://placehold.co/100x100.png?text=${user?.logged_user_name?.slice(0, 1).toUpperCase()}` }}
             style={styles.profileImg}
           />
-          <Text style={styles.name}>{user?.logged_user_name}</Text>
-          <Text style={styles.role}>{user?.role_type}</Text>
+          {user && (
+            <View>
+              <Text style={styles.name}>{user?.logged_user_name}</Text>
+              <Text style={styles.role}>{user?.role_type}</Text>
+            </View>
+          )}
         </View>
       </Pressable>
 
@@ -376,11 +406,13 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 18,
     fontWeight: '700',
+    textAlign: 'center'
   },
 
   role: {
     color: '#C4D2D7',
     fontSize: 13,
+    textAlign: 'center'
   },
 
   menuList: {

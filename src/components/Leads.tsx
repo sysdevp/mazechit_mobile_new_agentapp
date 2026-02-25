@@ -131,12 +131,19 @@ const Leads = () => {
 
   const isWithinDateRange = (dateStr: string) => {
     if (!startDate && !endDate) return true;
-
+  
     const itemDate = new Date(dateStr);
-
-    if (startDate && itemDate < startDate) return false;
-    if (endDate && itemDate > endDate) return false;
-
+    itemDate.setHours(0, 0, 0, 0);
+  
+    const start = startDate ? new Date(startDate) : null;
+    const end = endDate ? new Date(endDate) : null;
+  
+    start?.setHours(0, 0, 0, 0);
+    end?.setHours(23, 59, 59, 999);
+  
+    if (start && itemDate < start) return false;
+    if (end && itemDate > end) return false;
+  
     return true;
   };
 
@@ -495,7 +502,10 @@ const Leads = () => {
           {/* CLOSE ICON */}
           <Pressable
             style={styles.closeButton}
-            onPress={() => setFilterModalVisible(false)}
+            onPress={() => {
+              console.log('close clicked');
+              setFilterModalVisible(false);
+            }}
           >
             <Icon name="close" size={24} color="#fff" />
           </Pressable>
@@ -544,7 +554,7 @@ const Leads = () => {
           {/* DROPDOWNS */}
 
           <CustomDropdown
-            label="Staus"
+            label="Status"
             placeholder="Select the Branch"
             value1={status}
             items={leadStatus}
@@ -690,7 +700,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
-  closeButton: { position: 'absolute', top: 15, right: 15 },
+  closeButton: { position: 'absolute', top: 15, right: 15, zIndex: 10, },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',

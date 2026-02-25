@@ -161,6 +161,9 @@ const AddLeads = () => {
 
     if (!name) errors.push('• Name is required');
     if (!mobile) errors.push('• Mobile number is required');
+    if (mobile.length !== 10) {
+      errors.push('• Enter a valid 10 digit mobile number');
+    }
     if (!branchId) errors.push('• Branch is required');
     if (!status) errors.push('• Status is required');
 

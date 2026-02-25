@@ -198,6 +198,7 @@ const CollectionReport = () => {
       db: dataBase,
       tenant_id: user?.tenant_id,
       branch_id: branch,
+      employee_id: user?.employee_id ,
       group_id: group,
       start_date: start_date,
       end_date: end_date,
@@ -561,7 +562,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
-  closeButton: { position: 'absolute', top: 15, right: 15 },
+  closeButton: { position: 'absolute', top: 15, right: 15, zIndex: 10, },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',

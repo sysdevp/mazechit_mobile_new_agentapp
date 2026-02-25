@@ -186,8 +186,9 @@ const ViewReceipts = () => {
     const payload = {
       db: dataBase,
       tenant_id: user?.tenant_id,
+      employee_id: user?.employee_id ,
       branch_id: branch,
-      group_id: group,
+      group_id: group,  
       start_date: start_date,
       end_date: end_date,
     };
@@ -219,7 +220,7 @@ const ViewReceipts = () => {
     }, [user])
   );
 
-  if(isLoading) {
+  if (isLoading) {
     return <HistorySkeleton />
   }
   return (
@@ -258,68 +259,68 @@ const ViewReceipts = () => {
                 .toLowerCase()
                 .includes(search?.toLowerCase())
             ).map((item, index) => {
-          const isExpanded = expandedIndex === index;
-          return (
-            <Pressable
-              key={index}
-              style={styles.card}
-              onPress={() => toggleExpand(index)}
-            // onPress={() => navigation.navigate('ReceiptDetails')}
-            >
-              <View style={styles.headerRow}>
-                <View>
-                  <Text style={styles.name}>{item.customer_name}</Text>
-                  <Text style={styles.mobile}>{item.mobile_no}</Text>
-                </View>
-
-                <View style={styles.rightSection}>
-                  <View style={styles.dateAmountRow}>
+              const isExpanded = expandedIndex === index;
+              return (
+                <Pressable
+                  key={index}
+                  style={styles.card}
+                  onPress={() => toggleExpand(index)}
+                // onPress={() => navigation.navigate('ReceiptDetails')}
+                >
+                  <View style={styles.headerRow}>
                     <View>
-                      {/* <Text style={styles.date}>{item.receipt_date}</Text> */}
-                      <Text style={styles.amount}>₹ {item.received_amount}</Text>
+                      <Text style={styles.name}>{item.customer_name}</Text>
+                      <Text style={styles.mobile}>{item.mobile_no}</Text>
                     </View>
-                    <Pressable onPress={() => toggleExpand(index)}>
-                      <View>
-                        <Icon
-                          name={isExpanded ? 'chevron-up' : 'chevron-forward'}
-                          size={16}
-                          color="#FFD700"
-                          style={styles.smallIcon}
-                        />
-                      </View>
-                    </Pressable>
-                  </View>
-                </View>
-              </View>
 
-              {isExpanded && (
-                <View style={styles.expandArea}>
-                  <View style={styles.row}>
-                    <Text style={styles.label}>Customer Code:</Text>
-                    <Text style={styles.value}>{item.customer_code || 'N/A'}</Text>
+                    <View style={styles.rightSection}>
+                      <View style={styles.dateAmountRow}>
+                        <View>
+                          {/* <Text style={styles.date}>{item.receipt_date}</Text> */}
+                          <Text style={styles.amount}>₹ {item.received_amount}</Text>
+                        </View>
+                        <Pressable onPress={() => toggleExpand(index)}>
+                          <View>
+                            <Icon
+                              name={isExpanded ? 'chevron-up' : 'chevron-forward'}
+                              size={16}
+                              color="#FFD700"
+                              style={styles.smallIcon}
+                            />
+                          </View>
+                        </Pressable>
+                      </View>
+                    </View>
                   </View>
-                  <View style={styles.row}>
-                    <Text style={styles.label}>Payment Mode:</Text>
-                    <Text style={styles.value}>{item.payment_mode || 'N/A'}</Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.label}>Receipt No:</Text>
-                    <Text style={styles.value}>{item.receipt_no || 'N/A'}</Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.label}>Receipt Date:</Text>
-                    <Text style={styles.value}>{item.receipt_date || 'N/A'}</Text>
-                  </View>
-                  <View style={styles.row}>
-                    <Text style={styles.label}>Receipt Type:</Text>
-                    <Text style={styles.value}>{item.receipt_type || 'N/A'}</Text>
-                  </View>
-                  {/* <View style={styles.row}>
+
+                  {isExpanded && (
+                    <View style={styles.expandArea}>
+                      <View style={styles.row}>
+                        <Text style={styles.label}>Customer Code:</Text>
+                        <Text style={styles.value}>{item.customer_code || 'N/A'}</Text>
+                      </View>
+                      <View style={styles.row}>
+                        <Text style={styles.label}>Payment Mode:</Text>
+                        <Text style={styles.value}>{item.payment_mode || 'N/A'}</Text>
+                      </View>
+                      <View style={styles.row}>
+                        <Text style={styles.label}>Receipt No:</Text>
+                        <Text style={styles.value}>{item.receipt_no || 'N/A'}</Text>
+                      </View>
+                      <View style={styles.row}>
+                        <Text style={styles.label}>Receipt Date:</Text>
+                        <Text style={styles.value}>{item.receipt_date || 'N/A'}</Text>
+                      </View>
+                      <View style={styles.row}>
+                        <Text style={styles.label}>Receipt Type:</Text>
+                        <Text style={styles.value}>{item.receipt_type || 'N/A'}</Text>
+                      </View>
+                      {/* <View style={styles.row}>
                     <Text style={styles.label}>Group Name:</Text>
                     <Text style={styles.value}>{item.groupname || 'N/A'}</Text>
                   </View> */}
 
-                  {/*
+                      {/*
       {renderRow('Group Name:', data.groupname || 'N/A')}
                   
                   {/* <View style={styles.row}>
@@ -338,30 +339,30 @@ const ViewReceipts = () => {
                       {item.status}
                     </Text>
                   </View> */}
-                  <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 }}>
-                    <TouchableOpacity
-                      onPress={() => navigation.navigate('ReceiptDetails', {data: item})}
-                      style={styles.linkBtn}
-                    >
-                      <Icon
-                        name="navigate-circle-outline"
-                        color="#FFE27A"
-                        size={13}
-                      />
-                      <Text style={styles.linkText}>View Receipts</Text>
-                    </TouchableOpacity>
-                  </View>
-                </View>
-              )}
-            </Pressable>
-          );
-        })
-    ) : (
-      <View style={styles.noDataContainer}>
-        <Text style={styles.noDataText}>No data found</Text>
-      </View>
-    )}
-  </ScrollView>
+                      <View style={{ flexDirection: 'row', justifyContent: 'flex-end', marginTop: 10 }}>
+                        <TouchableOpacity
+                          onPress={() => navigation.navigate('ReceiptDetails', { data: item })}
+                          style={styles.linkBtn}
+                        >
+                          <Icon
+                            name="navigate-circle-outline"
+                            color="#FFE27A"
+                            size={13}
+                          />
+                          <Text style={styles.linkText}>View Receipts</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  )}
+                </Pressable>
+              );
+            })
+        ) : (
+          <View style={styles.noDataContainer}>
+            <Text style={styles.noDataText}>No data found</Text>
+          </View>
+        )}
+      </ScrollView>
 
       {/* FILTER MODAL */}
       <Modal
@@ -535,7 +536,7 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 20,
     borderTopRightRadius: 20,
   },
-  closeButton: { position: 'absolute', top: 15, right: 15 },
+  closeButton: { position: 'absolute', top: 15, right: 15, zIndex: 10, },
   modalTitle: {
     fontSize: 18,
     fontWeight: '600',

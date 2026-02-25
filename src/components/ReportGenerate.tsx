@@ -88,7 +88,7 @@ const ReportGenerate = () => {
   const handleTableData = () => {
     if (!reportData?.installments_det?.length) return;
 
-    const formattedData = reportData.installments_det.map((item) => {
+    const formattedData = reportData.installments_det.map(item => {
       const penaltyAmount = Number(item.penalty_amounts) || 0;
       const penaltyPercentage = Number(item.penalty_percentage) || 0;
 

@@ -96,7 +96,7 @@ const BeforeEnrollment = () => {
 
   /* ---------------- SUBMIT ---------------- */
   const handleSubmit = async () => {
-    if (!amount || !mode || !feedback) {
+    if (!amount || !mode) {
       Dialog.show({
         type: ALERT_TYPE.WARNING,
         title: 'Missing Details',

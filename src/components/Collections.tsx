@@ -27,9 +27,12 @@ const Collection = () => {
   const [userId, setUserId] = useState('');
   const [statsData, setStatsData] = useState<any[]>([]);
   const [collection, setCollection] = useState<any[]>([]);
+  const [unEnrolled, setUnenrolled] = useState<any[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
   const [refreshing, setRefreshing] = useState(false);
+
+  const [activeTab, setActiveTab] = useState<'enrolled' | 'unenrolled'>('enrolled');
 
   const baseUrl = COMMON.BaseUrl;
   const DbName = COMMON.DbName;
@@ -122,14 +125,42 @@ const Collection = () => {
     }
   };
 
+  const fetchUnenrolledCollections = async () => {
+    const payload = {
+      db: DbName,
+      tenant_id: userId,
+    };
+
+    try {
+      const response = await axios.post(
+        `${baseUrl}/get-unenrollment-mobile`,
+        { params: payload },
+      );
+
+      const res = response.data.data;
+
+      setUnenrolled(res);
+
+    } catch (err) {
+      console.error('Error While Fertching fetchUnenrolledCollections', err);
+    } finally {
+    }
+  };
   // ---------------- Refresh Handler ----------------
   const onRefresh = useCallback(() => {
     setRefreshing(true);
     fetchCollections();
+    fetchUnenrolledCollections();
   }, []);
 
   const filteredCollection = collection?.length > 0 && collection?.filter(c =>
     c.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+    c.mobile_no?.toString().includes(search),
+  );
+
+  const filteredunEnrolled = unEnrolled?.length > 0 && unEnrolled?.filter(c =>
+    c.customer_name?.toLowerCase().includes(search.toLowerCase()) ||
+    c.customer_code?.toString().includes(search.toUpperCase()) ||
     c.mobile_no?.toString().includes(search),
   );
 
@@ -144,14 +175,12 @@ const Collection = () => {
     useCallback(() => {
       if (userId) {
         fetchCollections();
+        fetchUnenrolledCollections();
       }
     }, [userId]),
   );
-
-  // const statsData = [
-  //   { label: 'To be Collected', amount: '₹5000', bg: '#E9E648' },
-  //   { label: 'Cash in Hand', amount: '₹1000', bg: '#E9E648' },
-  // ];
+  
+  console.log(unEnrolled, "unEnrolled data console")
 
   if (isLoading) {
     return <ListHeaderSkeleton />;
@@ -212,22 +241,79 @@ const Collection = () => {
         </TouchableOpacity> */}
       </View>
 
-      {/* ---------------- Status Legend ---------------- */}
-      <View style={styles.statusContainer}>
-        <View style={styles.statusIndicator}>
-          <Octicons name="dot-fill" size={15} color="#F29339" />
-          <Text style={styles.statusIndicatorText}>Pending</Text>
+      {/* ---------------- Tabs And Status Legend ---------------- */}
+      <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+        <View style={styles.topTabContainer}>
+          <Pressable
+            style={[
+              styles.tabBtn,
+              activeTab === 'enrolled' && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab('enrolled')}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'enrolled' && styles.activeTabText,
+              ]}
+            >
+              Enrolled
+            </Text>
+          </Pressable>
+
+          <Pressable
+            style={[
+              styles.tabBtn,
+              activeTab === 'unenrolled' && styles.activeTab,
+            ]}
+            onPress={() => setActiveTab('unenrolled')}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === 'unenrolled' && styles.activeTabText,
+              ]}
+            >
+              Unenrolled
+            </Text>
+          </Pressable>
         </View>
 
-        <View style={styles.statusIndicator}>
-          <Octicons name="dot-fill" size={15} color="#E53935" />
-          <Text style={styles.statusIndicatorText}>Over Due</Text>
-        </View>
+        {activeTab === 'enrolled' && (
+          <View style={styles.statusContainer}>
+            <View style={styles.statusIndicator}>
+              <Octicons name="dot-fill" size={15} color="#F29339" />
+              <Text style={styles.statusIndicatorText}>Pending</Text>
+            </View>
+
+            <View style={styles.statusIndicator}>
+              <Octicons name="dot-fill" size={15} color="#E53935" />
+              <Text style={styles.statusIndicatorText}>Overdue</Text>
+            </View>
+          </View>
+        )}
       </View>
-
       {/* ---------------- Customer List ---------------- */}
       <FlatList
-        data={filteredCollection}
+        data={
+          activeTab === 'enrolled'
+            ? filteredCollection
+            : filteredunEnrolled
+          // [
+          //   {
+          //     customer_name: 'Sample User 1',
+          //     mobile_no: '9876543210',
+          //     total_pending: '0',
+          //     overdue: 0,
+          //   },
+          //   {
+          //     customer_name: 'Sample User 2',
+          //     mobile_no: '9123456780',
+          //     total_pending: '500',
+          //     overdue: 1,
+          //   },
+          // ]
+        }
         keyExtractor={(_, index) => index.toString()}
         contentContainerStyle={{ paddingBottom: 40, flexGrow: 1 }}
         refreshing={refreshing}
@@ -257,24 +343,32 @@ const Collection = () => {
                 <Text style={styles.phone}>{item.mobile_no}</Text>
               </View>
             </View>
+            {activeTab === 'enrolled' ? (
+              <View
+                style={[
+                  styles.statusBadge,
+                  {
+                    backgroundColor:
+                      item.overdue !== 1 && item.total_pending === '0'
+                        ? '#4CAF50' // Green
+                        : item.overdue === 1 && item.total_pending !== '0'
+                          ? '#E53935' // Red
+                          : '#F29339', // Orange (default)
+                  },
+                ]}
+              >
+                <Text style={styles.statusText}>
+                  ₹ {item.total_pending}
+                </Text>
+              </View>
+            ) : (
+              <View>
+                <Text style={styles.statusString}>
+                  {item.customer_code}
+                </Text>
+              </View>
+            )}
 
-            <View
-              style={[
-                styles.statusBadge,
-                {
-                  backgroundColor:
-                    item.overdue !== 1 && item.total_pending === '0'
-                      ? '#4CAF50' // Green
-                      : item.overdue === 1 && item.total_pending !== '0'
-                        ? '#E53935' // Red
-                        : '#F29339', // Orange (default)
-                },
-              ]}
-            >
-              <Text style={styles.statusText}>
-                ₹ {item.total_pending}
-              </Text>
-            </View>
           </Pressable>
         )}
       />
@@ -408,6 +502,11 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: 'bold',
   },
+  statusString: {
+    color: '#FFD700',
+    fontSize: 14,
+    fontWeight: 'bold',
+  },
 
   statusContainer: {
     flexDirection: 'row',
@@ -423,6 +522,35 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontWeight: 'bold',
     paddingHorizontal: 5,
+  },
+
+  topTabContainer: {
+    flexDirection: 'row',
+    alignSelf: 'flex-start',
+    backgroundColor: '#E6EEF533',
+    borderRadius: 15,
+    padding: 4,
+    marginTop: 12,
+  },
+
+  tabBtn: {
+    paddingVertical: 6,
+    paddingHorizontal: 14,
+    borderRadius: 15,
+  },
+
+  activeTab: {
+    backgroundColor: '#0b7383',
+  },
+
+  tabText: {
+    fontSize: 13,
+    fontWeight: '500',
+    color: '#fff',
+  },
+
+  activeTabText: {
+    color: '#fff',
   },
 });
 

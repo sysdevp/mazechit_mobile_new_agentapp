@@ -151,12 +151,16 @@ const DayClosingReport = () => {
       }, 0);
       
       setDayReport(res);
-      setTotalDebit(totalDebit);
+      setTotalDebit(totalDebit);[]
       setTotalCredit(totalCredit);
       setOpeningBalance(res.opening_balance)
       setClosingBalance(res.closing_balance)
     } catch (err) {
       console.error('Error While Fertching day-book-mobile', err);
+      setTotalDebit('0');
+      setTotalCredit('0');
+      setOpeningBalance('0')
+      setClosingBalance('0')
     } finally {
     }
   };

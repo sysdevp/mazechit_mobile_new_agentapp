@@ -76,6 +76,8 @@ const GenerateReport = () => {
     }, [user])
   );
 
+  console.log(data, "data test console")
+
 
   if (isLoading) {
     return <GenerateReportSkeleton />;
@@ -91,7 +93,7 @@ const GenerateReport = () => {
           <Icon name="person" size={30} color="#666" />
         </View>
         <View>
-          <Text style={styles.userName}>{data?.customer_name}</Text>
+          <Text style={styles.userName}>{data?.customer_name} || {data?.customer_code}</Text>
           <Text style={styles.userPhone}>{data?.mobile_no}</Text>
         </View>
       </View>
