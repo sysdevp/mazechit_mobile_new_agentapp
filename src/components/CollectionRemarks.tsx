@@ -79,6 +79,7 @@ const CollectionRemarks = () => {
       db: dataBase,
       tenant_id: user?.tenant_id,
       customer_id: data?.customer_id,
+      user_id: user?.logged_user_id,
     };
 
     try {

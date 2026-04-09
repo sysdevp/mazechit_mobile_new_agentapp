@@ -49,6 +49,7 @@ const Leads = () => {
   const [userId, setUserId] = useState('');
   const [status, setStatus] = useState('');
   const [branch, setBranch] = useState('');
+  const [userLoggedId, setUserLoggedId] = useState('');
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -106,6 +107,11 @@ const Leads = () => {
     } catch (error) {
       console.log('Error fetching branch data:', error);
     }
+  };
+
+  const formatDateNew = (date: string) => {
+    if (date == null) return null;
+    return date.split('-').reverse().join('-');
   };
 
   const toggleExpand = (index: number) => {
@@ -194,6 +200,7 @@ const Leads = () => {
       (await AsyncStorage.getItem('loginDetails')) ?? '{}',
     );
     setUserId(value?.tenant_id);
+    setUserLoggedId(value?.logged_user_id);
   };
 
   const fetchLeads = async () => {
@@ -202,6 +209,7 @@ const Leads = () => {
     const payload = {
       db: DbName,
       tenant_id: userId,
+      user_id: userLoggedId,
     };
 
     try {
@@ -368,7 +376,7 @@ const Leads = () => {
                         <View>
                           <Text style={styles.date}>Next Followup</Text>
                           <Text style={styles.amount}>
-                            {item.next_followup_date}
+                            {formatDateNew(item.next_followup_date)}
                           </Text>
                         </View>
                         <Pressable onPress={() => toggleExpand(index)}>

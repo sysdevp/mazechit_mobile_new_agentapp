@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
 import {
   StyleSheet,
   Text,
@@ -6,15 +6,20 @@ import {
   ScrollView,
   Pressable,
   TouchableOpacity,
-  Modal,
+  Modal as RNModal,
   TextInput,
   RefreshControl,
+  Alert,
+  Linking,
 } from 'react-native';
+import Modal from 'react-native-modal';
 import LinearGradient from 'react-native-linear-gradient';
 import Ionicons from 'react-native-vector-icons/Ionicons';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import Icon from 'react-native-vector-icons/Ionicons';
 import Header from './Header';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import CustomDropdown from './custom/CustomDropdown';
 type RootStackParamList = {
   AddLeads: undefined;
   ViewReceipts: undefined;
@@ -31,6 +36,7 @@ import Stack from './Stack';
 import DashboardSkeleton from './loaders/DashboardSkeleton';
 import Geolocation from '@react-native-community/geolocation';
 import { ALERT_TYPE, Dialog } from 'react-native-alert-notification';
+import DeviceInfo from 'react-native-device-info';
 
 const OFFLINE_RECEIPTS_KEY = 'offline_receipts';
 
@@ -107,7 +113,7 @@ const Home = () => {
   const baseUrl = COMMON.BaseUrl;
   const DbName = COMMON.DbName;
 
-  const [_branch, setBranch] = useState<any[]>([]);
+  const [branch, setBranch] = useState<string>('');
   const [incomeCardsData, setIncomeCardsData] = useState<any[]>([]);
   const [attendanceListData, setAttendanceListData] = useState<any[]>([]);
   const [collectionChart, setCollectionChart] = useState<any[]>([]);
@@ -117,6 +123,7 @@ const Home = () => {
   const [user, setUser] = useState();
   const [userName, setUserName] = useState('');
   const [tenantId, setTenantId] = useState<number>();
+  const [branchId, setBranchId] = useState<any>();
 
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
@@ -129,6 +136,108 @@ const Home = () => {
   const [notifications, setNotifications] = useState<any[]>([])
 
   const [refreshing, setRefreshing] = useState(false);
+
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+
+  const [group, setGroup] = useState<string>('');
+  const [branchData, setBranchData] = useState<any[]>([]);
+  const [employeeData, setEmployeeData] = useState<any[]>([]);
+  const [employee, setEmployee] = useState<any>(null);
+  const [groupData, setGroupData] = useState<any[]>([]);
+
+  const isClearingRef = useRef(false);
+
+  // ========== App Version Check ==========
+
+  const compareVersions = (v1, v2) => {
+    const a = v1.split(".").map(Number);
+    const b = v2.split(".").map(Number);
+
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      const num1 = a[i] || 0;
+      const num2 = b[i] || 0;
+
+      if (num1 > num2) return 1;
+      if (num1 < num2) return -1;
+    }
+
+    return 0;
+  };
+
+  const isSafeVersion = async () => {
+    setIsLoading(true);
+
+    try {
+      const appVersion = await DeviceInfo.getVersion();
+      // const appVersion = "0.1";
+      const packageName = DeviceInfo.getBundleId();
+      console.log(appVersion, "App Version");
+
+      const response = await axios.post(
+        `${baseUrl}/mobile-app-version?db=${DbName}`
+      );
+
+      const { latest_version, critical_version } = response.data;
+      console.log(response.data);
+      console.log(critical_version, "Critical Version")
+
+      const playStoreUrl =
+        `https://play.google.com/store/apps/details?id=${packageName}`;
+
+      // FORCE UPDATE
+      if (compareVersions(appVersion, critical_version) === -1) {
+        Alert.alert(
+          "⚠️ Update Required",
+          "You must update the app to continue using it.",
+          [
+            {
+              text: "Update",
+              onPress: () => Linking.openURL(playStoreUrl),
+            },
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
+
+      // OPTIONAL UPDATE
+      // if (compareVersions(appVersion, latest_version) === -1) {
+      //   Alert.alert(
+      //     "Update Available",
+      //     "A new version of the app is available.",
+      //     [
+      //       { text: "Later", style: "cancel" },
+      //       {
+      //         text: "Update",
+      //         onPress: () => Linking.openURL(playStoreUrl),
+      //       },
+      //     ]
+      //   );
+      // }
+    } catch (error) {
+      console.log(error);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const userData = async () => {
+    const value = JSON.parse(
+      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
+    );
+
+    console.log(value, "Login details");
+    setUser(value);
+    setUserName(value?.logged_user_name)
+    setUserId(value?.logged_user_id);
+    setTenantId(value?.tenant_id);
+    setBranchId(value?.branch_id)
+  };
+
+  useEffect(() => {
+    isSafeVersion();
+    userData();
+  }, []);
 
   // ========== Attendance Status Fetch ==========
   const attendanceStatusFetch = async () => {
@@ -167,18 +276,6 @@ const Home = () => {
 
   // ========== User Details ==========
 
-  const userData = async () => {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
-    );
-
-    console.log(value);
-    setUser(value);
-    setUserName(value?.logged_user_name)
-    setUserId(value?.logged_user_id);
-    setTenantId(value?.tenant_id);
-  };
-
   useFocusEffect(
     useCallback(() => {
       userData();
@@ -194,6 +291,9 @@ const Home = () => {
       db: DbName,
       tenant_id: tenantId,
       user_id: userId,
+      branch_id: branch,
+      group_id: group,
+      employee_id: employee,
     };
 
     const DASHBOARD_CACHE_KEY = `dashboard_cache_${userId}`;
@@ -344,6 +444,7 @@ const Home = () => {
     const payload = {
       db: DbName,
       tenant_id: tenantId,
+      user_id: userId,
     };
 
     try {
@@ -356,11 +457,44 @@ const Home = () => {
       );
 
       const res = response.data.data;
+      const employeeList = response.data.employees;
       setBranch(res);
 
-      await AsyncStorage.setItem('branchData', JSON.stringify(res));
+      // setEmployeeList(employeeList);
+      console.log(employeeList, "Employee list response")
+      const storedData = JSON.stringify(response.data.data);
+      const employeeData = JSON.stringify(response.data.employees);
 
-      console.log('Lead view Branches', res);
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+
+        const formattedBranches = [
+          { label: 'All', value: '' },
+          ...parsedData.map((item: any) => ({
+            label: item.branch_name,
+            value: item.branch_id,
+          })),
+        ];
+
+        setBranchData(formattedBranches);
+      }
+
+      if (employeeData) {
+        const parsedData = JSON.parse(employeeData);
+
+        const formattedBranches = [
+          { label: 'All', value: '' },
+          ...parsedData.map((item: any) => ({
+            label: item.first_name + ' ' + item.last_name,
+            value: item.employee_id,
+          })),
+        ];
+
+        setEmployeeData(formattedBranches);
+      }
+
+      await AsyncStorage.setItem('branchData', JSON.stringify(res));
+      await AsyncStorage.setItem('employeeData', JSON.stringify(employeeList));
       return;
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -373,6 +507,7 @@ const Home = () => {
     const payload = {
       db: DbName,
       tenant_id: tenantId,
+      user_id: userId,
     };
 
     try {
@@ -430,6 +565,7 @@ const Home = () => {
     const payload = {
       db: DbName,
       tenant_id: tenantId,
+      user_id: userId,
     };
 
     try {
@@ -487,6 +623,7 @@ const Home = () => {
   const fetchCities = async () => {
     const payload = {
       db: DbName,
+      user_id: userId,
     };
 
     try {
@@ -515,6 +652,7 @@ const Home = () => {
   const fetchDistrict = async () => {
     const payload = {
       db: DbName,
+      user_id: userId,
     };
 
     try {
@@ -544,6 +682,7 @@ const Home = () => {
     const payload = {
       db: DbName,
       tenant_id: tenantId,
+      user_id: userId,
     };
 
     try {
@@ -558,6 +697,23 @@ const Home = () => {
       const res = response.data;
       setBranch(res);
 
+      const storedData = JSON.stringify(response.data);
+
+      if (storedData) {
+        const parsedData = JSON.parse(storedData);
+
+        console.log(parsedData, 'parsedData')
+        const formattedBranches = [
+          { label: 'All', value: '' },
+          ...parsedData.map((item: any) => ({
+            label: item.group_name,
+            value: item.group_id,
+          })),
+        ];
+
+        setGroupData(formattedBranches);
+      }
+
       await AsyncStorage.setItem('groups', JSON.stringify(res));
 
       console.log('Groups Response', res);
@@ -569,10 +725,60 @@ const Home = () => {
 
   // ========== Employee List ==========
 
+  // const fetchUsers = async () => {
+  //   const payload = {
+  //     db: DbName,
+  //     tenant_id: tenantId,
+  //     user_id: userId,
+  //     branch_id: branchId,
+  //   };
+
+  //   try {
+  //     const response = await axios.post(
+  //       `${baseUrl}/mobile-list-users`,
+  //       null,
+  //       {
+  //         params: payload,
+  //       },
+  //     );
+
+  //     const res = response.data;
+  //     // setBranch(res);
+  //     console.log(res, "User list response")
+
+  //     const storedData = JSON.stringify(response.data);
+
+  //     if (storedData) {
+  //       const parsedData = JSON.parse(storedData);
+
+  //       console.log(parsedData, 'parsedData')
+  //       const formattedBranches = [
+  //         { label: 'All', value: '' },
+  //         ...parsedData.map((item: any) => ({
+  //           label: item.group_name,
+  //           value: item.group_id,
+  //         })),
+  //       ];
+
+  //       // setGroupData(formattedBranches);
+  //     }
+
+  //     await AsyncStorage.setItem('groups', JSON.stringify(res));
+
+  //     console.log('Groups Response', res);
+  //     return;
+  //   } catch (error) {
+  //     console.error('Error fetching Groups:', error);
+  //   }
+  // };
+
+  // ========== Employee List ==========
+
   const fetchEmployees = async () => {
     const payload = {
       db: DbName,
       tenant_id: tenantId,
+      user_id: userId,
     };
 
     try {
@@ -601,6 +807,7 @@ const Home = () => {
     const payload = {
       db: DbName,
       tenant_id: tenantId,
+      user_id: userId,
     };
 
     try {
@@ -689,14 +896,108 @@ const Home = () => {
     // }, 2000);
   }, []);
 
+  // const fetchBranchData = async () => {
+  //   const payload = {
+  //     db: DbName,
+  //     tenant_id: user?.tenant_id,
+  //   };
+  //   try {
+  //     const response = await axios.post(
+  //       `${baseUrl}/mobile-list-branches`,
+  //       null,
+  //       {
+  //         params: payload,
+  //       },
+  //     );
+
+  //     const storedData = JSON.stringify(response.data.data);
+
+  //     if (storedData) {
+  //       const parsedData = JSON.parse(storedData);
+
+  //       const formattedBranches = [
+  //         { label: 'All', value: '' },
+  //         ...parsedData.map((item: any) => ({
+  //           label: item.branch_name,
+  //           value: item.branch_id,
+  //         })),
+  //       ];
+
+  //       setBranchData(formattedBranches);
+  //     }
+  //   } catch (error) {
+  //     console.log('Error fetching branch data:', error);
+  //   }
+  // };
+
+  // --- Group details getch ---
+
+  // const fetchGroupsData = async () => {
+  //   const payload = {
+  //     db: DbName,
+  //     tenant_id: user?.tenant_id,
+  //     branch_id: branch,
+  //   };
+  //   try {
+  //     const response = await axios.post(
+  //       `${baseUrl}/mobile-list-groups`,
+  //       null,
+  //       {
+  //         params: payload,
+  //       },
+  //     );
+  //     const storedData = JSON.stringify(response.data);
+
+  //     if (storedData) {
+  //       const parsedData = JSON.parse(storedData);
+
+  //       console.log(parsedData, 'parsedData')
+  //       const formattedBranches = [
+  //         { label: 'All', value: '' },
+  //         ...parsedData.map((item: any) => ({
+  //           label: item.group_name,
+  //           value: item.group_id,
+  //         })),
+  //       ];
+
+  //       setGroupData(formattedBranches);
+  //     }
+  //   } catch (error) {
+  //     console.log('Error fetching branch data:', error);
+  //   }
+  // };
+
+  const handleFilter = () => {
+
+    fetchDashboard();
+    setFilterModalVisible(false);
+  };
+
+  const handleFilterClear = () => {
+    isClearingRef.current = true;
+
+    setGroup('');
+    setBranch('');
+    setFilterModalVisible(false);
+  };
+
+  useEffect(() => {
+    if (isClearingRef.current && branch === '' && group === '') {
+      fetchDashboard();
+      isClearingRef.current = false;
+    }
+  }, [branch, group]);
+
+
   useEffect(() => {
     attendanceStatusFetch();
   }, [pre]);
 
   useEffect(() => {
-    userData();
+    // userData();
     attendanceStatusFetch();
     fetchBranch();
+    // fetchUsers()
     fetchBanks();
     fetchPaymentMode();
     fetchSchemes();
@@ -737,12 +1038,14 @@ const Home = () => {
     return <DashboardSkeleton />;
   }
 
+  console.log(branchData, "branchData test console")
+  console.log(groupData, "groupData test console")
   return (
     <LinearGradient colors={['#061C3F', '#0A5E6A']} style={styles.gradient}>
-      <Header attendance={attendanceStatusStored} notifications={notifications} setNotifications={setNotifications} userName={userName} />
+      <Header attendance={attendanceStatusStored} notifications={notifications} setNotifications={setNotifications} userName={userName} setFilterModalVisible={setFilterModalVisible} />
       {/* === ATTENDANCE CARD === */}
       {isAttendanceMarked !== 1 && (
-        <AttendanceCard onSubmit={setAttendanceStatus} DbName={DbName} tenantId={tenantId} BaseUrl={baseUrl} user={user} setIsLocation={setIsLocation} isLocation={isLocation} setPre={setPre} setNotifications={setNotifications} notifications={notifications} />
+        <AttendanceCard onSubmit={setAttendanceStatus} DbName={DbName} tenantId={tenantId} BaseUrl={baseUrl} user={user} setIsLocation={setIsLocation} isLocation={isLocation} setPre={setPre} setNotifications={setNotifications} notifications={notifications} userId={userId} />
       )}
 
       <IncomeCards incomeCardsData={incomeCardsData} />
@@ -800,8 +1103,67 @@ const Home = () => {
           </View>
         </ScrollView>
       )}
+
+<Modal
+        isVisible={filterModalVisible}
+        onBackdropPress={() => setFilterModalVisible(false)}
+        style={styles.modal}
+      >
+        <View style={styles.modalContent}>
+          {/* CLOSE BUTTON */}
+          <Pressable
+            style={styles.closeButton}
+            onPress={() => setFilterModalVisible(false)}
+            hitSlop={{ top: 15, bottom: 15, left: 20, right: 20 }}
+          >
+            <Icon name="close" size={24} color="#fff" />
+          </Pressable>
+
+          <Text style={styles.modalTitle}>Filter</Text>
+          {/* {user?.role_type === 'Admin' && ( */}
+            <>
+
+              {/* BRANCH DROPDOWN */}
+              <CustomDropdown
+                label="Branch"
+                placeholder="Select the Branch"
+                value1={branch}
+                items={branchData}
+                onChangeValue={(v: string | null) => {
+                  setBranch(v || '');
+                }}
+              />
+
+              {/* GROPU DROPDOWN */}
+              <CustomDropdown
+                label="Employee"
+                placeholder="Select the Employee"
+                value1={employee}
+                items={employeeData}
+                onChangeValue={(v: string | null) => {
+                  setEmployee(v || '');
+                }}
+              />
+            </>
+          {/* )} */}
+          {/* BUTTONS */}
+          <View style={styles.buttonRow}>
+            <Pressable style={styles.clearButton}
+              onPress={handleFilterClear}>
+              <Text style={styles.clearText}>Clear</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.applyButtonNew}
+              onPress={handleFilter}
+            >
+              <Text style={styles.applyText}>Apply</Text>
+            </Pressable>
+          </View>
+        </View>
+      </Modal>
     </LinearGradient>
-  );
+  );  
 };
 
 export default Home;
@@ -929,6 +1291,7 @@ const AttendanceCard = ({
       tenant_id: tenantId,
       branch_id: user?.branch_id,
       att_date: att_date,
+      user_id: userId,
       employee_id: user?.employee_id,
       attendance_type: attendanceType,
       afternoon_session: afternoonSession,
@@ -1011,7 +1374,7 @@ const AttendanceCard = ({
         </Pressable>
       </View>
 
-      <Modal
+      <RNModal
         transparent
         animationType="slide"
         visible={absentModal}
@@ -1078,7 +1441,7 @@ const AttendanceCard = ({
             </View>
           </View>
         </View>
-      </Modal>
+      </RNModal>
 
     </View>
   );
@@ -1446,5 +1809,81 @@ const styles = StyleSheet.create({
     color: '#FFF',
     fontWeight: '500',
   },
-
+  modal: { justifyContent: 'flex-end', margin: 0 },
+  modalContent: {
+    backgroundColor: '#0A5E6A',
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  closeButton: { position: 'absolute', top: 15, right: 15, zIndex: 10, },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#fff',
+  },
+  dateRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 15,
+  },
+  datePickerButtonSmall: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    borderRadius: 12,
+    backgroundColor: '#ffffff33',
+    marginRight: 8,
+  },
+  datePickerTextSmall: { marginLeft: 8, color: '#fff', fontSize: 14 },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 5,
+    color: '#ccc',
+  },
+  dropdown: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#ffffff33',
+    borderRadius: 12,
+    padding: 12,
+    marginBottom: 12,
+  },
+  dropdownText: { color: '#fff', fontSize: 14 },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  clearButton: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#fff',
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  clearText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  applyButtonNew: {
+    flex: 1,
+    backgroundColor: '#235DFF',
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  applyText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  applyButton: {
+    flex: 1,
+    backgroundColor: '#235DFF',
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
 });

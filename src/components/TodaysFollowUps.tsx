@@ -57,6 +57,11 @@ const TodaysFollowUps = () => {
       .padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
   };
 
+  const formatDateNew = (date: string) => {
+    if (date == null) return null;
+    return date.split('-').reverse().join('-');
+  };
+
   /* ---------------- USER DATA ---------------- */
   const userData = async () => {
     const value = JSON.parse(
@@ -89,6 +94,8 @@ const TodaysFollowUps = () => {
       db: dataBase,
       tenant_id: user?.tenant_id,
       branch_id: branch,
+      employee_id: user?.employee_id,
+      user_id: user?.logged_user_id,
       // created_by: 1,
       // remark_date: remark_date,
     };
@@ -204,7 +211,7 @@ const TodaysFollowUps = () => {
 
                 <View style={styles.dateBadge}>
                   <Icon name="calendar-outline" size={14} color="#FFD700" />
-                  <Text style={styles.dateText}>{item.next_followup_date}</Text>
+                  <Text style={styles.dateText}>{formatDateNew(item.next_followup_date)}</Text>
                 </View>
               </View>
 

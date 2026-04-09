@@ -34,7 +34,9 @@ const CollectionFeedbackReport = () => {
   const [collectionFbReport, setCollectionFbReport] = useState<any[]>([]);
   const [filteredFBReport, setFilteredFBReport] = useState<any[]>([]);
   const [branchData, setBranchData] = useState<any[]>([]);
+  const [employeeData, setEmployeeData] = useState<any[]>([]);
   const [branch, setBranch] = useState('');
+  const [employee, setEmployee] = useState<any>(null);
   const [search, setSearch] = useState('');
 
   const isClearingRef = useRef(false);
@@ -59,28 +61,63 @@ const CollectionFeedbackReport = () => {
       .padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
   };
 
-  /* ---------------- USER DATA ---------------- */
-  const userData = async () => {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
-    );
-    setUser(value);
+  const formatDateNew = (date: string) => {
+    if (date == null) return null;
+    return date.split('-').reverse().join('-');
   };
 
-  /* ---------------- BRANCH DATA ---------------- */
-  const fetchBranchData = async () => {
-    const storedData = await AsyncStorage.getItem('branchData');
-    if (storedData) {
-      const parsed = JSON.parse(storedData);
+  /* ---------------- USER DATA ---------------- */
+  const userData = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('loginDetails');
+      const employeeData = await AsyncStorage.getItem('employeeData');
+      const branchData = await AsyncStorage.getItem('branchData');
+      const value = stored ? JSON.parse(stored) : {};
+
+      const branchList = branchData ? JSON.parse(branchData) : [];
+      const employeeList = employeeData ? JSON.parse(employeeData) : [];
+
+      setUser(value);
+
+      console.log(employeeList, "employeeList", branchList, "branchList", value);
+
       setBranchData([
         { label: 'All', value: '' },
-        ...parsed.map((b: any) => ({
+        ...branchList.map((b: any) => ({
           label: b.branch_name,
           value: b.branch_id,
         })),
       ]);
+
+      setEmployeeData([
+        { label: 'All', value: '' },
+        ...employeeList.map((e: any) => ({
+          label: `${e.first_name} - ${e.last_name}`,
+          value: e.employee_id,
+        })),
+      ]);
+
+    } catch (err) {
+      console.error('Error parsing loginDetails', err);
     }
   };
+
+  console.log(employeeData, "employeeData and branchData", branchData);
+
+  /* ---------------- BRANCH DATA ---------------- */
+  // const fetchBranchData = async () => {
+  //   const storedData = await AsyncStorage.getItem('branchData');
+  //   if (storedData) {
+  //     const parsed = JSON.parse(storedData);
+  //     setBranchData([
+  //       { label: 'All', value: '' },
+  //       ...parsed.map((b: any) => ({
+  //         label: b.branch_name,
+  //         value: b.branch_id,
+  //       })),
+  //     ]);
+  //   }
+  // };
 
   /* ---------------- API CALL ---------------- */
   const fetchCollectionFeedbackReport = async () => {
@@ -90,7 +127,8 @@ const CollectionFeedbackReport = () => {
     const payload = {
       db: dataBase,
       tenant_id: user?.tenant_id,
-      employee_id: user?.employee_id ,
+      user_id: user?.logged_user_id,
+      employee_id: employee,
       branch_id: branch,
       // created_by: 1,
       remark_date: remark_date,
@@ -124,6 +162,10 @@ const CollectionFeedbackReport = () => {
       temp = temp.filter((i: any) => i.branch_id === branch);
     }
 
+    if (employee) {
+      temp = temp.filter((i: any) => i.employee_id === employee);
+    }
+
     if (startDate) {
       temp = temp.filter(
         (i: any) =>
@@ -142,21 +184,22 @@ const CollectionFeedbackReport = () => {
 
     setFilteredFBReport(collectionFbReport);
     setBranch('');
+    setEmployee('');
     setStartDate(null);
     setFilterModalVisible(false);
   };
 
   useEffect(() => {
-    if (isClearingRef.current && branch === '') {
+    if (isClearingRef.current && branch === '' && employee === '') {
       fetchCollectionFeedbackReport();
       isClearingRef.current = false;
     }
-  }, [branch, startDate]);
+  }, [branch, employee, startDate]);
 
   /* ---------------- EFFECTS ---------------- */
   useEffect(() => {
     userData();
-    fetchBranchData();
+    // fetchBranchData();
   }, []);
 
   useFocusEffect(
@@ -198,14 +241,14 @@ const CollectionFeedbackReport = () => {
 
                 <View style={styles.dateBadge}>
                   <Icon name="calendar-outline" size={14} color="#FFD700" />
-                  <Text style={styles.dateText}>{item.remark_date}</Text>
+                  <Text style={styles.dateText}>{formatDateNew(item.remark_date)}</Text>
                 </View>
               </View>
 
               <View style={styles.infoRow}>
                 <Text style={styles.label}>Next Follow-up</Text>
                 <Text style={styles.value}>
-                  {item.next_followup_date}
+                  {formatDateNew(item.next_followup_date)}
                 </Text>
               </View>
 
@@ -234,17 +277,28 @@ const CollectionFeedbackReport = () => {
         <View style={styles.modalContent}>
           <Text style={styles.modalTitle}>Filter</Text>
 
-          {user?.role_type === 'Admin' && (
-            <>
-              <CustomDropdown
-                label="Branch"
-                placeholder="Select Branch"
-                value1={branch}
-                items={branchData}
-                onChangeValue={v => setBranch(v || '')}
-              />
-            </>
+          {/* {user?.role_type === 'Admin' && ( */}
+          {branchData.length > 1 && (
+          // <>
+            <CustomDropdown
+              label="Branch"
+              placeholder="Select Branch"
+              value1={branch}
+              items={branchData}
+              onChangeValue={v => setBranch(v || '')}
+            />
+          // </>
           )}
+          {employeeData.length > 1 && (
+            <CustomDropdown
+              label="Employee"
+              placeholder="Select Employee"
+              value1={employee}
+              items={employeeData}
+              onChangeValue={v => setEmployee(v || '')}
+            />
+          )}
+          {/* )} */}
           <Text style={styles.sectionLabel}>Next Follow-up Date</Text>
           <Pressable
             style={styles.datePickerButtonSmall}

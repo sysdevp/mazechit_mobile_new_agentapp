@@ -450,6 +450,7 @@ const ReportGenerate = () => {
       db: dataBase,
       tenant_id: user?.tenant_id,
       branch_id: user?.branch_id,
+      user_id: user?.logged_user_id,
       other_branch: '',
       balance_advance_amount: advance,
       customer_id: reportData?.customer_id,
@@ -907,7 +908,7 @@ const ReportGenerate = () => {
                 <Text style={styles.processingText}>Submitting...</Text>
               </View>
             ) : (
-              <Text style={styles.submitText}>Submitt</Text>
+              <Text style={styles.submitText}>Submit</Text>
             )}
           </TouchableOpacity>
 

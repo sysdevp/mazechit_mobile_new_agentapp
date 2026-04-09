@@ -79,7 +79,8 @@ const ReceiptDetails = () => {
     const payload = {
       db: dataBase,
       tenant_id: data?.tenant_id,
-      receipt_no: data?.receipt_no
+      receipt_no: data?.receipt_no,
+      user_id: user?.logged_user_id,
     };
 
     try {

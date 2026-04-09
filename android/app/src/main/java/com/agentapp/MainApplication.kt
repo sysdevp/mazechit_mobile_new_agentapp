@@ -1,4 +1,4 @@
-package com.agentapp
+package com.satheeshBalaji
 
 import android.app.Application
 import com.facebook.react.PackageList
@@ -17,7 +17,7 @@ class MainApplication : Application(), ReactApplication {
           // Packages that cannot be autolinked yet can be added manually here, for example:
           // add(MyReactNativePackage())
         },
-    )
+    ) 
   }
 
   override fun onCreate() {

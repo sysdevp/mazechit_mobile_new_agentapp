@@ -18,25 +18,6 @@ import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
 import CustomDropdown from '../custom/CustomDropdown';
 
-const auctionData = [
-  {
-    date: '2026-01-07',
-    group: 'GRP-12 / TCKT-018',
-    customer: 'Lokesh Kumar',
-    chitValue: '8,00,000',
-    biddingAmount: '7,85,000',
-    prizedAmount: '15,000',
-  },
-  {
-    date: '2026-01-07',
-    group: 'GRP-09 / TCKT-010',
-    customer: 'Priya Sharma',
-    chitValue: '5,00,000',
-    biddingAmount: '4,70,000',
-    prizedAmount: '30,000',
-  },
-];
-
 const AuctionReport = () => {
   const [filterModalVisible, setFilterModalVisible] = useState(false);
 
@@ -50,17 +31,22 @@ const AuctionReport = () => {
 
   const [auctions, setAuctions] = useState<any[]>([]);
   const [user, setUser] = useState<any[]>([]);
+  const [userName, setUserName] = useState<string>('');
+  const [userId, setUserId] = useState<string>('');
+  const [tenantId, setTenantId] = useState<string>('');
 
-  const [branchData, setBranchData] = useState<any[]>();
+  const [branchData, setBranchData] = useState<any[]>([]);
+  const [employeeData, setEmployeeData] = useState<any[]>([]);
   const [groupData, setGroupData] = useState<any[]>();
 
   const [group, setGroup] = useState('1');
   const [branch, setBranch] = useState('');
-
+  const [employee, setEmployee] = useState<any>(null);
   const isClearingRef = useRef(false);
 
   const baseUrl = COMMON.BaseUrl;
   const dataBase = COMMON.DbName;
+  const DbName = COMMON.DbName;
 
   const onChangeStart = (event: any, selectedDate?: Date) => {
     setShowStartPicker(false);
@@ -125,18 +111,18 @@ const AuctionReport = () => {
   };
 
   useEffect(() => {
-    if (isClearingRef.current && branch === '' && group === '') {
+    if (isClearingRef.current && branch === '' && group === '' && employee === '') {
       fetchAuctionReport();
       isClearingRef.current = false;
     }
-  }, [branch, group, startDate, endDate]);
+  }, [branch, group, startDate, endDate, employee]);
 
 
   // --- Format Date ---
 
   const formatDate = date => {
     if (date == null) return null;
-    
+
     const d = new Date(date);
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -146,11 +132,102 @@ const AuctionReport = () => {
     return formatDate;
   };
 
+  // --- user details getch ---
+
+  // const userData = async () => {
+  //   const value = JSON.parse(
+  //     (await AsyncStorage.getItem('loginDetails')) ?? '{}',
+  //   );
+
+  //   console.log(value);
+  //   setUser(value);
+  //   setUserName(value?.logged_user_name)
+  //   setUserId(value?.logged_user_id);
+  //   setTenantId(value?.tenant_id);
+  // };
+
+  const userData = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('loginDetails') ?? '{}';
+      const employeeData = await AsyncStorage.getItem('employeeData') ?? '{}';
+      const branchData = await AsyncStorage.getItem('branchData') ?? '{}';
+      const value = stored ? JSON.parse(stored) : {};
+
+      const branchList = branchData ? JSON.parse(branchData) : [];
+      const employeeList = employeeData ? JSON.parse(employeeData) : [];
+      setUser(value);
+      setUserName(value?.logged_user_name)
+      setUserId(value?.logged_user_id);
+      setTenantId(value?.tenant_id);
+
+      console.log(employeeList, "employeeList", branchList, "branchList", value);
+
+      setBranchData([
+        { label: 'All', value: '' },
+        ...branchList.map((b: any) => ({
+          label: b.branch_name,
+          value: b.branch_id,
+        })),
+      ]);
+
+      setEmployeeData([
+        { label: 'All', value: '' },
+        ...employeeList.map((e: any) => ({
+          label: `${e.first_name} - ${e.last_name}`,
+          value: e.employee_id,
+        })),
+      ]);
+
+    } catch (err) {
+      console.error('Error parsing loginDetails', err);
+    }
+  };
+
+  const fetchAuctionReport = async () => {
+    const start_date = formatDate(startDate);
+    const end_date = formatDate(endDate);
+    const payload = {
+      db: dataBase,
+      tenant_id: user?.tenant_id,
+      branch_id: branch,
+      employee_id: employee,
+      group_id: group,
+      start_date: start_date,
+      end_date: end_date,
+      user_id: user?.logged_user_id,
+    };
+
+    try {
+      const response = await axios.post(`${baseUrl}/auction-reports`, null, {
+        params: payload,
+      });
+
+      const res = response.data;
+      setAuctions(res);
+    } catch (err) {
+      console.error('Error While Fertching feedvack', err);
+    } finally {
+    }
+  };
+
   // --- Branch details getch ---
 
   const fetchBranchData = async () => {
+    const payload = {
+      db: DbName,
+      tenant_id: user?.tenant_id,
+      user_id: user?.logged_user_id,
+    };
     try {
-      const storedData = await AsyncStorage.getItem('branchData');
+      const response = await axios.post(
+        `${baseUrl}/mobile-list-branches`,
+        null,
+        {
+          params: payload,
+        },
+      );
+
+      const storedData = JSON.stringify(response.data.data);
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -173,8 +250,21 @@ const AuctionReport = () => {
   // --- Group details getch ---
 
   const fetchGroups = async () => {
+    const payload = {
+      db: DbName,
+      tenant_id: user?.tenant_id,
+      branch_id: branch,
+      user_id: user?.logged_user_id,
+    };
     try {
-      const storedData = await AsyncStorage.getItem('groups');
+      const response = await axios.post(
+        `${baseUrl}/mobile-list-groups`,
+        null,
+        {
+          params: payload,
+        },
+      );
+      const storedData = JSON.stringify(response.data);
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -195,47 +285,16 @@ const AuctionReport = () => {
     }
   };
 
-  // --- user details getch ---
-
-  const userData = async () => {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
-    );
-
-    console.log(value);
-    setUser(value);
-  };
-
-  const fetchAuctionReport = async () => {
-    const start_date = formatDate(startDate);
-    const end_date = formatDate(endDate);
-    const payload = {
-      db: dataBase,
-      tenant_id: user?.tenant_id,
-      branch_id: branch,
-      group_id: group,
-      start_date: start_date,
-      end_date: end_date,
-    };
-
-    try {
-      const response = await axios.post(`${baseUrl}/auction-reports`, null, {
-        params: payload,
-      });
-
-      const res = response.data;
-      setAuctions(res);
-    } catch (err) {
-      console.error('Error While Fertching feedvack', err);
-    } finally {
-    }
-  };
-
   useEffect(() => {
     userData();
     fetchBranchData();
-    fetchGroups();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchGroups();
+    }, [branch])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -376,6 +435,29 @@ const AuctionReport = () => {
             />
           )}
 
+          {/* BRANCH DROPDOWN */}
+          {branchData?.length > 1 && (
+            <CustomDropdown
+              label="Branch"
+              placeholder="Select the Branch"
+              value1={branch}
+              items={branchData}
+              onChangeValue={(v: string | null) => {
+                setBranch(v || '');
+              }}
+            />
+          )}
+
+          {employeeData?.length > 1 && (
+            <CustomDropdown
+              label="Employee"
+              placeholder="Select Employee"
+              value1={employee}
+              items={employeeData}
+              onChangeValue={v => setEmployee(v || '')}
+            />
+          )}
+
           {/* GROPU DROPDOWN */}
           <CustomDropdown
             label="Group"
@@ -384,17 +466,6 @@ const AuctionReport = () => {
             items={groupData}
             onChangeValue={(v: string | null) => {
               setGroup(v || '1');
-            }}
-          />
-
-          {/* BRANCH DROPDOWN */}
-          <CustomDropdown
-            label="Branch"
-            placeholder="Select the Branch"
-            value1={branch}
-            items={branchData}
-            onChangeValue={(v: string | null) => {
-              setBranch(v || '');
             }}
           />
 

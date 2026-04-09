@@ -44,6 +44,8 @@ const GenerateReport = () => {
       db: dataBase,
       tenant_id: user?.tenant_id,
       customer_id: data?.customer_id,
+      employee_id: user?.employee_id,
+      user_id: user?.logged_user_id,
     };
 
     try {

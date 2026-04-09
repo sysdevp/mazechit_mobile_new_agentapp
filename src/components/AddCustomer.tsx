@@ -305,7 +305,8 @@ const AddCustomer = () => {
         tenant_id: user?.tenant_id,
         branch_id: user?.branch_id,
         scheme_id: form.scheme,
-
+        user_id: user?.logged_user_id,
+        
         name: form.name,
         // dob: '1990-05-15',
         gender: form.gender === 'male' ? 1 : form.gender === 'female' ? 2 : '',

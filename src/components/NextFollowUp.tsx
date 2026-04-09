@@ -112,6 +112,7 @@ const NextFollowUp = () => {
       tenant_id: user?.tenant_id,
       branch_id: user?.branch_id,
       created_by: user?.role_id,
+      user_id: user?.logged_user_id,
       lead_management_id: data?.lead_id,
       employee_id: user?.employee_id,
       followup_date: followup_date,
@@ -215,7 +216,7 @@ const NextFollowUp = () => {
         )}
 
         <CustomDropdownBottom
-          label="Staus"
+          label="Status"
           placeholder="Select Status"
           value1={status}
           items={leadStatus1}

@@ -57,6 +57,7 @@ const CustomerList = () => {
       db: dataBase,
       tenant_id: user?.tenant_id,
       branch_id: user?.branch_id,
+      user_id: user?.logged_user_id,
     };
 
     try {

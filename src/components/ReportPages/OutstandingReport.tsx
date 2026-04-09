@@ -40,16 +40,18 @@ const OutstandingReport = () => {
 
   const [status, setStatus] = useState('');
   const [branch, setBranch] = useState('');
-
+  const [employee, setEmployee] = useState<any>(null);
   const [isLoading, setIsLoading] = useState<boolean>(false);
 
-  const [branchData, setBranchData] = useState<any[]>();
+  const [branchData, setBranchData] = useState<any[]>([]);
+  const [employeeData, setEmployeeData] = useState<any[]>([]);
   const [groupData, setGroupData] = useState<any[]>();
 
   const isClearingRef = useRef(false);
 
   const baseUrl = COMMON.BaseUrl;
   const dataBase = COMMON.DbName;
+  const DbName = COMMON.DbName;
 
   const transactions = [
     { name: 'Octavia Devi', ticketNo: 'CUST-2382', amount: 15.89 },
@@ -79,8 +81,20 @@ const OutstandingReport = () => {
   };
 
   const fetchBranchData = async () => {
+    const payload = {
+      db: DbName,
+      tenant_id: data?.tenant_id,
+      user_id: data?.logged_user_id,
+    };
     try {
-      const storedData = await AsyncStorage.getItem('branchData');
+      const response = await axios.post(
+        `${baseUrl}/mobile-list-branches`,
+        null,
+        {
+          params: payload,
+        },
+      );
+      const storedData = JSON.stringify(response.data.data);
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -101,8 +115,21 @@ const OutstandingReport = () => {
   };
 
   const fetchGroups = async () => {
+    const payload = {
+      db: DbName,
+      tenant_id: data?.tenant_id,
+      branch_id: branch,
+      user_id: data?.logged_user_id,
+    };
     try {
-      const storedData = await AsyncStorage.getItem('groups');
+      const response = await axios.post(
+        `${baseUrl}/mobile-list-groups`,
+        null,
+        {
+          params: payload,
+        },
+      );
+      const storedData = JSON.stringify(response.data);
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -123,13 +150,48 @@ const OutstandingReport = () => {
     }
   };
 
-  const userData = async () => {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
-    );
+  // const userData = async () => {
+  //   const value = JSON.parse(
+  //     (await AsyncStorage.getItem('loginDetails')) ?? '{}',
+  //   );
 
-    console.log(value);
-    setData(value);
+  //   console.log(value);
+  //   setData(value);
+  // };
+
+  const userData = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('loginDetails') ?? '{}';
+      const employeeData = await AsyncStorage.getItem('employeeData') ?? '{}';
+      const branchData = await AsyncStorage.getItem('branchData') ?? '{}';
+      const value = stored ? JSON.parse(stored) : {};
+
+      const branchList = branchData ? JSON.parse(branchData) : [];
+      const employeeList = employeeData ? JSON.parse(employeeData) : [];
+
+      setData(value);
+
+      console.log(employeeList, "employeeList", branchList, "branchList", value);
+
+      setBranchData([
+        { label: 'All', value: '' },
+        ...branchList.map((b: any) => ({
+          label: b.branch_name,
+          value: b.branch_id,
+        })),
+      ]);
+
+      setEmployeeData([
+        { label: 'All', value: '' },
+        ...employeeList.map((e: any) => ({
+          label: `${e.first_name} - ${e.last_name}`,
+          value: e.employee_id,
+        })),
+      ]);
+
+    } catch (err) {
+      console.error('Error parsing loginDetails', err);
+    }
   };
 
   const handleFilter = () => {
@@ -200,7 +262,9 @@ const OutstandingReport = () => {
       tenant_id: data?.tenant_id,
       // branch_id: data?.branch_id,
       branch_id: branch,
-      group_id: status
+      group_id: status,
+      employee_id: employee,
+      user_id: data?.logged_user_id,
     };
 
     try {
@@ -224,9 +288,14 @@ const OutstandingReport = () => {
 
   useEffect(() => {
     userData();
-    fetchBranchData();
-    fetchGroups();
+    // fetchBranchData();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchGroups();
+    }, [branch])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -256,13 +325,13 @@ const OutstandingReport = () => {
           value={search}
           onChangeText={setSearch}
         />
-        {data?.role_type === 'Admin' && (
-          <>
-            <Pressable onPress={() => setFilterModalVisible(true)}>
-              <Icon name="filter" size={22} color="#666" />
-            </Pressable>
-          </>
-        )}
+        {/* {data?.role_type === 'Admin' && ( */}
+        <>
+          <Pressable onPress={() => setFilterModalVisible(true)}>
+            <Icon name="filter" size={22} color="#666" />
+          </Pressable>
+        </>
+        {/* )} */}
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false}>
@@ -367,6 +436,28 @@ const OutstandingReport = () => {
 
           {/* DROPDOWNS */}
 
+
+
+          {branchData?.length > 1 && (
+            <CustomDropdown
+              label="Branch"
+              placeholder="Select the Branch"
+              value1={branch}
+              items={branchData}
+              onChangeValue={(v: string | null) => {
+                setBranch(v || '');
+              }}
+            />
+          )}
+          {employeeData?.length > 1 && (
+            <CustomDropdown
+              label="Employee"
+              placeholder="Select Employee"
+              value1={employee}
+              items={employeeData}
+              onChangeValue={v => setEmployee(v || '')}
+            />
+          )}
           <CustomDropdown
             label="Group"
             placeholder="Select the Branch"
@@ -374,16 +465,6 @@ const OutstandingReport = () => {
             items={groupData}
             onChangeValue={(v: string | null) => {
               setStatus(v || '');
-            }}
-          />
-
-          <CustomDropdown
-            label="Branch"
-            placeholder="Select the Branch"
-            value1={branch}
-            items={branchData}
-            onChangeValue={(v: string | null) => {
-              setBranch(v || '');
             }}
           />
 

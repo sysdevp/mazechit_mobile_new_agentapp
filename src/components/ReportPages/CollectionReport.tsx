@@ -27,25 +27,6 @@ if (Platform.OS === 'android') {
     UIManager.setLayoutAnimationEnabledExperimental(true);
 }
 
-const data = [
-  {
-    name: 'Lokesh Kumar',
-    mobileNumber: '83928228983',
-    custCode: 'CUST-021',
-    ReceiptNo: 'REC-09798',
-    amount: '8,00,000',
-    Mode: 'Online',
-  },
-  {
-    name: 'Priya Sharma',
-    mobileNumber: '9876543210',
-    custCode: 'CUST-021',
-    ReceiptNo: 'REC-09798',
-    amount: '36,000',
-    Mode: 'UPI',
-  },
-];
-
 const CollectionReport = () => {
   const [expandedIndex, setExpandedIndex] = useState<number | null>(null);
   const [filterModalVisible, setFilterModalVisible] = useState(false);
@@ -62,16 +43,19 @@ const CollectionReport = () => {
   const [collections, setCollections] = useState<any[]>([]);
   const [user, setUser] = useState<any[]>([]);
 
-  const [branchData, setBranchData] = useState<any[]>();
-  const [groupData, setGroupData] = useState<any[]>();
+  const [branchData, setBranchData] = useState<any[]>([]);
+  const [employeeData, setEmployeeData] = useState<any[]>([]);
+  const [groupData, setGroupData] = useState<any[]>([]);
 
   const [group, setGroup] = useState('');
   const [branch, setBranch] = useState('');
+  const [employee, setEmployee] = useState<any>(null);
 
   const isClearingRef = useRef(false);
 
   const baseUrl = COMMON.BaseUrl;
   const dataBase = COMMON.DbName;
+  const DbName = COMMON.DbName;
   const toggleExpand = (index: number) => {
     LayoutAnimation.configureNext(
       LayoutAnimation.create(
@@ -110,11 +94,11 @@ const CollectionReport = () => {
   };
 
   useEffect(() => {
-    if (isClearingRef.current && branch === '' && group === '') {
+    if (isClearingRef.current && branch === '' && group === '' && employee === '') {
       fetchCollectionReport();
       isClearingRef.current = false;
     }
-  }, [branch, group, startDate, endDate]);
+  }, [branch, group, startDate, endDate, employee]);
 
 
   // --- Format Date ---
@@ -133,9 +117,69 @@ const CollectionReport = () => {
 
   // --- Branch details getch ---
 
+  // const fetchBranchData = async () => {
+  //   try {
+  //     const storedData = await AsyncStorage.getItem('branchData');
+
+  //     if (storedData) {
+  //       const parsedData = JSON.parse(storedData);
+
+  //       const formattedBranches = [
+  //         { label: 'All', value: '' },
+  //         ...parsedData.map((item: any) => ({
+  //           label: item.branch_name,
+  //           value: item.branch_id,
+  //         })),
+  //       ];
+
+  //       setBranchData(formattedBranches);
+  //     }
+  //   } catch (error) {
+  //     console.log('Error fetching branch data:', error);
+  //   }
+  // };
+
+  // // --- Group details fetch ---
+
+  // const fetchGroups = async () => {
+  //   try {
+  //     const storedData = await AsyncStorage.getItem('groups');
+
+  //     if (storedData) {
+  //       const parsedData = JSON.parse(storedData);
+
+  //       console.log(parsedData, 'parsedData')
+  //       const formattedBranches = [
+  //         { label: 'All', value: '' },
+  //         ...parsedData.map((item: any) => ({
+  //           label: item.group_name,
+  //           value: item.group_id,
+  //         })),
+  //       ];
+
+  //       setGroupData(formattedBranches);
+  //     }
+  //   } catch (error) {
+  //     console.log('Error fetching branch data:', error);
+  //   }
+  // };
+
   const fetchBranchData = async () => {
+    const payload = {
+      db: DbName,
+      tenant_id: user?.tenant_id,
+      user_id: user?.logged_user_id,
+    };
     try {
-      const storedData = await AsyncStorage.getItem('branchData');
+      const response = await axios.post(
+        `${baseUrl}/mobile-list-branches`,
+        null,
+        {
+          params: payload,
+        },
+      );
+
+      const storedData = JSON.stringify(response.data.data);
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -155,11 +199,24 @@ const CollectionReport = () => {
     }
   };
 
-  // --- Group details fetch ---
+  // --- Group details getch ---
 
   const fetchGroups = async () => {
+    const payload = {
+      db: DbName,
+      tenant_id: user?.tenant_id,
+      branch_id: branch,
+      user_id: user?.logged_user_id,
+    };
     try {
-      const storedData = await AsyncStorage.getItem('groups');
+      const response = await axios.post(
+        `${baseUrl}/mobile-list-groups`,
+        null,
+        {
+          params: payload,
+        },
+      );
+      const storedData = JSON.stringify(response.data);
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -182,13 +239,48 @@ const CollectionReport = () => {
 
   // --- user details getch ---
 
-  const userData = async () => {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
-    );
+  // const userData = async () => {
+  //   const value = JSON.parse(
+  //     (await AsyncStorage.getItem('loginDetails')) ?? '{}',
+  //   );
 
-    console.log(value);
-    setUser(value);
+  //   console.log(value);
+  //   setUser(value);
+  // };
+
+  const userData = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('loginDetails') ?? '{}';
+      const employeeData = await AsyncStorage.getItem('employeeData') ?? '{}';
+      const branchData = await AsyncStorage.getItem('branchData') ?? '{}';
+      const value = stored ? JSON.parse(stored) : {};
+
+      const branchList = branchData ? JSON.parse(branchData) : [];
+      const employeeList = employeeData ? JSON.parse(employeeData) : [];
+
+      setUser(value);
+
+      console.log(employeeList, "employeeList", branchList, "branchList", value);
+
+      setBranchData([
+        { label: 'All', value: '' },
+        ...branchList.map((b: any) => ({
+          label: b.branch_name,
+          value: b.branch_id,
+        })),
+      ]);
+
+      setEmployeeData([
+        { label: 'All', value: '' },
+        ...employeeList.map((e: any) => ({
+          label: `${e.first_name} - ${e.last_name}`,
+          value: e.employee_id,
+        })),
+      ]);
+
+    } catch (err) {
+      console.error('Error parsing loginDetails', err);
+    }
   };
 
   const fetchCollectionReport = async () => {
@@ -197,8 +289,9 @@ const CollectionReport = () => {
     const payload = {
       db: dataBase,
       tenant_id: user?.tenant_id,
+      user_id: user?.logged_user_id,
       branch_id: branch,
-      employee_id: user?.employee_id ,
+      employee_id: employee,
       group_id: group,
       start_date: start_date,
       end_date: end_date,
@@ -219,9 +312,14 @@ const CollectionReport = () => {
 
   useEffect(() => {
     userData();
-    fetchBranchData();
-    fetchGroups();
+    // fetchBranchData();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchGroups();
+    }, [branch])
+  );
 
   useFocusEffect(
     useCallback(() => {
@@ -418,20 +516,11 @@ const CollectionReport = () => {
             />
           )}
 
-          {user?.role_type === 'Admin' && (
-            <>
-              {/* GROPU DROPDOWN */}
-              <CustomDropdown
-                label="Group"
-                placeholder="Select the Branch"
-                value1={group}
-                items={groupData}
-                onChangeValue={(v: string | null) => {
-                  setGroup(v || '');
-                }}
-              />
+          {/* {user?.role_type === 'Admin' && ( */}
+          <>
 
-              {/* BRANCH DROPDOWN */}
+            {/* BRANCH DROPDOWN */}
+            {branchData?.length > 1 && (
               <CustomDropdown
                 label="Branch"
                 placeholder="Select the Branch"
@@ -441,8 +530,28 @@ const CollectionReport = () => {
                   setBranch(v || '');
                 }}
               />
-            </>
-          )}
+            )}
+            {employeeData?.length > 1 && (
+              <CustomDropdown
+                label="Employee"
+                placeholder="Select Employee"
+                value1={employee}
+                items={employeeData}
+                onChangeValue={v => setEmployee(v || '')}
+              />
+            )}
+            {/* GROPU DROPDOWN */}
+            <CustomDropdown
+              label="Group"
+              placeholder="Select the Branch"
+              value1={group}
+              items={groupData}
+              onChangeValue={(v: string | null) => {
+                setGroup(v || '');
+              }}
+            />
+          </>
+          {/* )} */}
           {/* BUTTONS */}
           <View style={styles.buttonRow}>
             <Pressable style={styles.clearButton}

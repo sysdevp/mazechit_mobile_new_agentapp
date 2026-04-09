@@ -38,6 +38,7 @@ const AddLeads = () => {
   const [remarks, setRemarks] = useState('');
   const [modeTypes, setModeTypes] = useState<any[]>([]);
   const [branchTypes, setBranchData] = useState<any[]>([]);
+  const [userLoggedId, setUserLoggedId] = useState('');
 
   const [date, setDate] = useState(new Date());
   const [showPicker, setShowPicker] = useState(false);
@@ -119,12 +120,14 @@ const AddLeads = () => {
       (await AsyncStorage.getItem('loginDetails')) ?? '{}',
     );
     setUserId(value?.tenant_id);
+    setUserLoggedId(value?.logged_user_id);
   };
 
   const fetchBranch = async () => {
     const payload = {
       db: DbName,
       tenant_id: userId,
+      user_id: userLoggedId,
     };
 
     try {
@@ -184,6 +187,7 @@ const AddLeads = () => {
       db: DbName,
       tenant_id: userId,
       branch_id: branchId,
+      user_id: userLoggedId,
       employee_id: '1',
       lead_customer_name: name,
       phone_no: '',

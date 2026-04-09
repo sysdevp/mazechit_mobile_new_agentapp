@@ -51,11 +51,13 @@ const Payment = () => {
   const [payments, setPayments] = useState<any[]>([]);
   const [user, setUser] = useState<any[]>([]);
 
-  const [branchData, setBranchData] = useState<any[]>();
+  const [branchData, setBranchData] = useState<any[]>([]);
+  const [employeeData, setEmployeeData] = useState<any[]>([]);
   const [groupData, setGroupData] = useState<any[]>();
 
   const [group, setGroup] = useState('');
   const [branch, setBranch] = useState('');
+  const [employee, setEmployee] = useState<any>(null);
 
   const isClearingRef = useRef(false);
 
@@ -121,6 +123,7 @@ const Payment = () => {
     setEndDate(null);
     setGroup('');
     setBranch('');
+    setEmployee('');
     setFilterModalVisible(false);
   };
 
@@ -129,7 +132,7 @@ const Payment = () => {
       fetchAuctionReport();
       isClearingRef.current = false;
     }
-  }, [branch, group, startDate, endDate]);
+  }, [branch, group, startDate, endDate, employee]);
 
 
   // --- Format Date ---
@@ -199,12 +202,38 @@ const Payment = () => {
   // --- user details getch ---
 
   const userData = async () => {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
-    );
+    try {
+      const stored = await AsyncStorage.getItem('loginDetails') ?? '{}';
+      const employeeData = await AsyncStorage.getItem('employeeData') ?? '{}';
+      const branchData = await AsyncStorage.getItem('branchData') ?? '{}';
+      const value = stored ? JSON.parse(stored) : {};
 
-    console.log(value);
-    setUser(value);
+      const branchList = branchData ? JSON.parse(branchData) : [];
+      const employeeList = employeeData ? JSON.parse(employeeData) : [];
+
+      setUser(value);
+
+      console.log(employeeList, "employeeList", branchList, "branchList", value);
+
+      setBranchData([
+        { label: 'All', value: '' },
+        ...branchList.map((b: any) => ({
+          label: b.branch_name,
+          value: b.branch_id,
+        })),
+      ]);
+
+      setEmployeeData([
+        { label: 'All', value: '' },
+        ...employeeList.map((e: any) => ({
+          label: `${e.first_name} - ${e.last_name}`,
+          value: e.employee_id,
+        })),
+      ]);
+
+    } catch (err) {
+      console.error('Error parsing loginDetails', err);
+    }
   };
 
   const fetchAuctionReport = async () => {
@@ -213,7 +242,9 @@ const Payment = () => {
     const payload = {
       db: dataBase,
       tenant_id: user?.tenant_id,
+      user_id: user?.logged_user_id,
       branch_id: branch,
+      employee_id: employee,
       group_id: group,
       start_date: start_date,
       end_date: end_date,
@@ -373,6 +404,27 @@ const Payment = () => {
             />
           )}
 
+          {/* BRANCH DROPDOWN */}
+          {branchData?.length > 1 && (
+            <CustomDropdown
+              label="Branch"
+              placeholder="Select the Branch"
+              value1={branch}
+              items={branchData}
+              onChangeValue={(v: string | null) => {
+                setBranch(v || '');
+              }}
+            />
+          )}
+          {employeeData?.length > 1 && (
+            <CustomDropdown
+              label="Employee"
+              placeholder="Select Employee"
+              value1={employee}
+              items={employeeData}
+              onChangeValue={v => setEmployee(v || '')}
+            />
+          )}
           {/* GROPU DROPDOWN */}
           <CustomDropdown
             label="Group"
@@ -381,17 +433,6 @@ const Payment = () => {
             items={groupData}
             onChangeValue={(v: string | null) => {
               setGroup(v || '1');
-            }}
-          />
-
-          {/* BRANCH DROPDOWN */}
-          <CustomDropdown
-            label="Branch"
-            placeholder="Select the Branch"
-            value1={branch}
-            items={branchData}
-            onChangeValue={(v: string | null) => {
-              setBranch(v || '');
             }}
           />
 

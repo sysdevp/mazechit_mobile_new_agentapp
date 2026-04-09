@@ -10,31 +10,13 @@ import {
 import LinearGradient from 'react-native-linear-gradient';
 import Header from '../Header';
 import Icon from 'react-native-vector-icons/Ionicons';
-import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useFocusEffect } from '@react-navigation/native';
 import COMMON from '../../comon/Common';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import CustomDropdown from '../custom/CustomDropdown';
-import CustomDropdownBottom from '../custom/CustomDropdownBottom';
-
-const auctionData = [
-  {
-    date: '2026-01-07',
-    group: 'GRP-12 / TCKT-018',
-    customer: 'Lokesh Kumar',
-    chitValue: '8,00,000',
-    biddingAmount: '7,85,000',
-    prizedAmount: '15,000',
-  },
-  {
-    date: '2026-01-07',
-    group: 'GRP-09 / TCKT-010',
-    customer: 'Priya Sharma',
-    chitValue: '5,00,000',
-    biddingAmount: '4,70,000',
-    prizedAmount: '30,000',
-  },
-];
+import Modal from 'react-native-modal';
+import DateTimePicker from '@react-native-community/datetimepicker';
 
 const EnrollmentReport = () => {
 
@@ -46,27 +28,34 @@ const EnrollmentReport = () => {
   const [showStartPicker, setShowStartPicker] = useState(false);
   const [showEndPicker, setShowEndPicker] = useState(false);
 
-  const navigation = useNavigation<any>();
+  const [tempStartDate, setTempStartDate] = useState<Date | null>(null);
+  const [tempEndDate, setTempEndDate] = useState<Date | null>(null);
+  const [tempBranch, setTempBranch] = useState('');
+  const [tempGroup, setTempGroup] = useState('');
+  const [tempEmployee, setTempEmployee] = useState<any>(null);
 
   const [search, setSearch] = useState<string>('');
 
   const [Enrollments, setEnrollements] = useState<any[]>([]);
-  const [user, setUser] = useState<any[]>([]);
+  const [user, setUser] = useState<any>(null);
 
-  const [branchData, setBranchData] = useState<any[]>();
-  const [groupData, setGroupData] = useState<any[]>();
+  const [branchData, setBranchData] = useState<any[]>([]);
+  const [employeeData, setEmployeeData] = useState<any[]>([]);
+  const [groupData, setGroupData] = useState<any[]>([]);
 
   const [group, setGroup] = useState('');
   const [branch, setBranch] = useState('');
+  const [employee, setEmployee] = useState<any>(null);
 
   const isClearingRef = useRef(false);
 
   const baseUrl = COMMON.BaseUrl;
   const dataBase = COMMON.DbName;
+  const DbName = COMMON.DbName;
 
   // --- Format Date ---
 
-  const formatDate = date => {
+  const formatDate = (date: Date | string | number | null) => {
     if (date == null) return null;
 
     const d = new Date(date);
@@ -78,11 +67,72 @@ const EnrollmentReport = () => {
     return formatDate;
   };
 
-  // --- Branch details getch ---
+  const onChangeStart = (event: any, selectedDate?: Date) => {
+    setShowStartPicker(false);
+    if (selectedDate) setTempStartDate(selectedDate);
+  };
+
+  const onChangeEnd = (event: any, selectedDate?: Date) => {
+    setShowEndPicker(false);
+    if (selectedDate) setTempEndDate(selectedDate);
+  };
+
+  const handleFilter = () => {
+    setStartDate(tempStartDate);
+    setEndDate(tempEndDate);
+    setBranch(tempBranch);
+    setGroup(tempGroup);
+    setEmployee(tempEmployee);
+    fetchEnrollementReport({
+      nextStartDate: tempStartDate,
+      nextEndDate: tempEndDate,
+      nextBranch: tempBranch,
+      nextGroup: tempGroup,
+      nextEmployee: tempEmployee,
+    });
+    setFilterModalVisible(false);
+  };
+
+  const handleFilterClear = () => {
+    isClearingRef.current = true;
+    setTempStartDate(null);
+    setTempEndDate(null);
+    setTempBranch('');
+    setTempGroup('');
+    setTempEmployee(null);
+
+    setStartDate(null);
+    setEndDate(null);
+    setBranch('');
+    setGroup('');
+    setEmployee(null);
+
+    fetchEnrollementReport({
+      nextStartDate: null,
+      nextEndDate: null,
+      nextBranch: '',
+      nextGroup: '',
+      nextEmployee: null,
+    });
+    setFilterModalVisible(false);
+  };
 
   const fetchBranchData = async () => {
+    const payload = {
+      db: DbName,
+      tenant_id: user?.tenant_id,
+      user_id: user?.logged_user_id,
+    };
     try {
-      const storedData = await AsyncStorage.getItem('branchData');
+      const response = await axios.post(
+        `${baseUrl}/mobile-list-branches`,
+        null,
+        {
+          params: payload,
+        },
+      );
+
+      const storedData = JSON.stringify(response.data.data);
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -105,8 +155,21 @@ const EnrollmentReport = () => {
   // --- Group details getch ---
 
   const fetchGroups = async () => {
+    const payload = {
+      db: DbName,
+      tenant_id: user?.tenant_id,
+      branch_id: branch,
+      user_id: user?.logged_user_id,
+    };
     try {
-      const storedData = await AsyncStorage.getItem('groups');
+      const response = await axios.post(
+        `${baseUrl}/mobile-list-groups`,
+        null,
+        {
+          params: payload,
+        },
+      );
+      const storedData = JSON.stringify(response.data);
 
       if (storedData) {
         const parsedData = JSON.parse(storedData);
@@ -127,25 +190,63 @@ const EnrollmentReport = () => {
     }
   };
 
+
   // --- user details getch ---
 
   const userData = async () => {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
-    );
+    try {
+      const stored = (await AsyncStorage.getItem('loginDetails')) ?? '{}';
+      const employeeStored = (await AsyncStorage.getItem('employeeData')) ?? '[]';
+      const branchStored = (await AsyncStorage.getItem('branchData')) ?? '[]';
 
-    console.log(value);
-    setUser(value);
+      const value = stored ? JSON.parse(stored) : {};
+      const employeeList = employeeStored ? JSON.parse(employeeStored) : [];
+      const branchList = branchStored ? JSON.parse(branchStored) : [];
+
+      setUser(value);
+
+      setBranchData([
+        { label: 'All', value: '' },
+        ...branchList.map((b: any) => ({
+          label: b.branch_name,
+          value: b.branch_id,
+        })),
+      ]);
+
+      setEmployeeData([
+        { label: 'All', value: '' },
+        ...employeeList.map((e: any) => ({
+          label: `${e.first_name} - ${e.last_name}`,
+          value: e.employee_id,
+        })),
+      ]);
+    } catch (err) {
+      console.error('Error parsing loginDetails', err);
+    }
   };
 
-  const fetchEnrollementReport = async () => {
-    const start_date = formatDate(startDate);
-    const end_date = formatDate(endDate);
+  const fetchEnrollementReport = async (opts?: {
+    nextStartDate?: Date | null;
+    nextEndDate?: Date | null;
+    nextBranch?: string;
+    nextGroup?: string;
+    nextEmployee?: any;
+  }) => {
+    const nextStart = opts?.nextStartDate ?? startDate;
+    const nextEnd = opts?.nextEndDate ?? endDate;
+    const nextBranch = opts?.nextBranch ?? branch;
+    const nextGroup = opts?.nextGroup ?? group;
+    const nextEmployee = opts?.nextEmployee ?? employee;
+
+    const start_date = formatDate(nextStart);
+    const end_date = formatDate(nextEnd);
     const payload = {
       db: dataBase,
       tenant_id: user?.tenant_id,
-      branch_id: branch,
-      group_id: group,
+      user_id: user?.logged_user_id,
+      branch_id: nextBranch,
+      group_id: nextGroup,
+      employee_id: nextEmployee,
       start_date: start_date,
       end_date: end_date,
     };
@@ -165,16 +266,20 @@ const EnrollmentReport = () => {
 
   useEffect(() => {
     userData();
-    fetchBranchData();
-    fetchGroups();
   }, []);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchGroups();
+    }, [branch])
+  );
 
   useFocusEffect(
     useCallback(() => {
       if (user?.tenant_id) {
         fetchEnrollementReport();
       }
-    }, [user, branch, group])
+    }, [user])
   );
 
   return (
@@ -190,40 +295,124 @@ const EnrollmentReport = () => {
           value={search}
           onChangeText={setSearch}
         />
+        <Pressable
+          onPress={() => {
+            setTempStartDate(startDate);
+            setTempEndDate(endDate);
+            setTempBranch(branch);
+            setTempGroup(group);
+            setTempEmployee(employee);
+            setFilterModalVisible(true);
+          }}
+        >
+          <Icon name="filter" size={22} color="#666" />
+        </Pressable>
       </View>
 
-      <View>
-        <View style={styles.dateRow}>
-          {/* GROPU DROPDOWN */}
+      {/* FILTER MODAL */}
+      <Modal
+        isVisible={filterModalVisible}
+        onBackdropPress={() => setFilterModalVisible(false)}
+        style={styles.modal}
+      >
+        <View style={styles.modalContent}>
+          <Pressable
+            style={styles.closeButton}
+            onPress={() => setFilterModalVisible(false)}
+            hitSlop={{ top: 15, bottom: 15, left: 20, right: 20 }}
+          >
+            <Icon name="close" size={24} color="#fff" />
+          </Pressable>
 
-          <CustomDropdownBottom
-            label="Group"
-            placeholder="Select the Branch"
-            value1={group}
-            items={groupData}
-            onChangeValue={(v: string | null) => {
-              setGroup(v || '');
-            }}
-          />
+          <Text style={styles.modalTitle}>Filter</Text>
 
-          {/* BRANCH DROPDOWN */}
-          <CustomDropdownBottom
-            label="Branch"
-            placeholder="Select the Branch"
-            value1={branch}
-            items={branchData}
-            onChangeValue={(v: string | null) => {
-              setBranch(v || '');
-            }}
-          />
+          {/* <Text style={styles.sectionLabel}>Date Range</Text> */}
+          {/* <View style={styles.dateRow}>
+            <Pressable
+              style={styles.datePickerButton}
+              onPress={() => setShowStartPicker(true)}
+            >
+              <Icon name="calendar-outline" size={18} color="#fff" />
+              <Text style={styles.dateText}>
+                {tempStartDate ? tempStartDate.toDateString() : 'Start'}
+              </Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.datePickerButton}
+              onPress={() => setShowEndPicker(true)}
+            >
+              <Icon name="calendar-outline" size={18} color="#fff" />
+              <Text style={styles.dateText}>
+                {tempEndDate ? tempEndDate.toDateString() : 'End'}
+              </Text>
+            </Pressable>
+          </View> */}
+
+          {/* {showStartPicker && (
+            <DateTimePicker
+              value={tempStartDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={onChangeStart}
+            />
+          )}
+
+          {showEndPicker && (
+            <DateTimePicker
+              value={tempEndDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={onChangeEnd}
+            />
+          )} */}
+
+          {branchData?.length > 1 && (
+            <CustomDropdown
+              label="Branch"
+              placeholder="Select the Branch"
+              value1={tempBranch}
+              items={branchData}
+              onChangeValue={(v: string | null) => setTempBranch(v || '')}
+            />
+          )}
+
+          {employeeData?.length > 1 && (
+            <CustomDropdown
+              label="Employee"
+              placeholder="Select Employee"
+              value1={tempEmployee}
+              items={employeeData}
+              onChangeValue={v => setTempEmployee(v || '')}
+            />
+          )}
+
+          {/* {groupData?.length > 1 && ( */}
+            <CustomDropdown
+              label="Group"
+              placeholder="Select Group"
+              value1={tempGroup}
+              items={groupData}
+              onChangeValue={(v: string | null) => setTempGroup(v || '')}
+            />
+          {/* )} */}
+
+          <View style={styles.buttonRow}>
+            <Pressable style={styles.clearButton} onPress={handleFilterClear}>
+              <Text style={styles.clearText}>Clear</Text>
+            </Pressable>
+            <Pressable style={styles.applyButton} onPress={handleFilter}>
+              <Text style={styles.applyText}>Apply</Text>
+            </Pressable>
+          </View>
         </View>
-      </View>
+      </Modal>
 
       {/* AUCTION CARDS */}
       <ScrollView showsVerticalScrollIndicator={false}>
         {Enrollments?.length > 0 ? (
           Enrollments
-            .filter(item =>
+            .filter((item: any) =>
               item.customer_name
                 ?.toLowerCase()
                 .includes(search?.toLowerCase()) ||
@@ -320,6 +509,15 @@ const styles = StyleSheet.create({
     marginBottom: 12,
     gap: 10,
   },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff33',
+    padding: 10,
+    borderRadius: 12,
+    flex: 1,
+  },
+  dateText: { color: '#fff', marginLeft: 8 },
   dropdown: {
     flex: 1,
     flexDirection: 'row',

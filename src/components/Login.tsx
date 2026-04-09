@@ -8,6 +8,8 @@ import {
   StyleSheet,
   BackHandler,
   ActivityIndicator,
+  Alert,
+  Linking,
 } from 'react-native';
 import FontAwesome from 'react-native-vector-icons/FontAwesome';
 import Feather from 'react-native-vector-icons/Feather';
@@ -43,6 +45,22 @@ export default function LoginScreen() {
 
   const BaseUrl = COMMON.BaseUrl;
   const appName = COMMON.ClientApName;
+
+  const compareVersions = (v1: string, v2: string) => {
+    if (!v1 || !v2) return 0;
+    const a = v1.split(".").map(Number);
+    const b = v2.split(".").map(Number);
+
+    for (let i = 0; i < Math.max(a.length, b.length); i++) {
+      const num1 = a[i] || 0;
+      const num2 = b[i] || 0;
+
+      if (num1 > num2) return 1;
+      if (num1 < num2) return -1;
+    }
+
+    return 0;
+  };
 
   useEffect(() => {
     DeviceInfo.getAndroidId().then((androidId) => {
@@ -87,76 +105,113 @@ export default function LoginScreen() {
 
   const handleSubmit = async () => {
     setIsLoading(true);
-    if (!validateForm()) return setIsLoading(false);;
+
+    if (!validateForm()) {
+      setIsLoading(false);
+      return;
+    }
 
     try {
       const url = `${BaseUrl}/check-login?email=${email}&password=${password}&device_id=${deviecId}`;
 
       const response = await fetch(url, {
-        method: 'POST',
+        method: "POST",
         headers: {
-          'Content-Type': 'application/json',
+          "Content-Type": "application/json",
         },
       });
 
       const result = await response.json();
 
       if (!response.ok) {
-        // API error message
         Dialog.show({
           type: ALERT_TYPE.DANGER,
-          title: 'Error',
-          textBody: result.message || 'Login failed',
-          button: 'close',
+          title: "Error",
+          textBody: result.message || "Login failed",
+          button: "close",
         });
-
         return;
       }
 
-      // If the user login for the first time
+      // APP VERSION CHECK
+      const appVersion = DeviceInfo.getVersion();
+      // const appVersion = "0.1";
+      const packageName = DeviceInfo.getBundleId();
 
+      const playStoreUrl = `https://play.google.com/store/apps/details?id=${packageName}`;
+
+      const latest_version = result.latest_version;
+      const critical_version = result.critical_version;
+
+      // FORCE UPDATE
+      if (compareVersions(appVersion, critical_version) === -1) {
+        Alert.alert(
+          "⚠️ Update Required",
+          "You must update the app to continue using it.",
+          [
+            {
+              text: "Update",
+              onPress: () => Linking.openURL(playStoreUrl),
+            },
+          ],
+          { cancelable: false }
+        );
+        return;
+      }
+
+      // OPTIONAL UPDATE
+      if (compareVersions(appVersion, latest_version) === -1) {
+        Alert.alert("🚨 Update Available", "A new version is available.", [
+          { text: "Later", style: "cancel" },
+          {
+            text: "Update",
+            onPress: () => Linking.openURL(playStoreUrl),
+          },
+        ]);
+      }
+
+      // DEVICE ID CHECK
       if (result.status !== "Success") {
         Dialog.show({
           type: ALERT_TYPE.WARNING,
-          title: 'Warning',
-          textBody: 'Device Id missing. PLease Verify',
-          button: 'close',
+          title: "Warning",
+          textBody: "Device Id missing. Please Verify",
+          button: "close",
           autoClose: 500,
         });
 
-        // await AsyncStorage.setItem('loginDetails', JSON.stringify(result));
-
-        navigation.navigate('OTP', { data: result });
-
+        navigation.navigate("OTP", { data: result });
         return;
       }
 
-      console.log('Login success:', result);
+      console.log("Login success:", result);
 
-      await AsyncStorage.setItem('loginDetails', JSON.stringify(result));
+      await AsyncStorage.setItem("loginDetails", JSON.stringify(result));
+      await AsyncStorage.setItem("branchList", JSON.stringify(result?.branch_list));
+      await AsyncStorage.setItem("employeeList", JSON.stringify(result?.employee_list));
 
       const hasLocationPermission = await requestLocationPermission();
 
       if (!hasLocationPermission) {
         Dialog.show({
           type: ALERT_TYPE.WARNING,
-          title: 'Permission Required',
-          textBody: 'Location permission is required to continue.',
-          button: 'close',
+          title: "Permission Required",
+          textBody: "Location permission is required to continue.",
+          button: "close",
         });
-        return; // stop navigation
+        return;
       }
 
       Dialog.show({
         type: ALERT_TYPE.SUCCESS,
-        title: 'Success',
-        textBody: 'Login Successfull',
-        button: 'close',
+        title: "Success",
+        textBody: "Login Successful",
+        button: "close",
         autoClose: 500,
       });
 
-      setEmail('');
-      setPassword('');
+      setEmail("");
+      setPassword("");
 
       setTimeout(() => {
         // Add Home to history
@@ -169,17 +224,152 @@ export default function LoginScreen() {
         });
       }, 1000);
     } catch (error) {
-      console.error('Login error:', error);
+      console.error("Login error:", error);
+
       Dialog.show({
         type: ALERT_TYPE.DANGER,
-        title: 'Error',
-        textBody: 'Something went wrong. Please try again.',
-        button: 'close',
+        title: "Error",
+        textBody: "Something went wrong. Please try again.",
+        button: "close",
       });
     } finally {
       setIsLoading(false);
     }
   };
+
+  // const handleSubmitOld = async () => {
+  //   setIsLoading(true);
+  //   if (!validateForm()) return setIsLoading(false);;
+
+  //   try {
+  //     const url = `${BaseUrl}/check-login?email=${email}&password=${password}&device_id=${deviecId}`;
+
+  //     const response = await fetch(url, {
+  //       method: 'POST',
+  //       headers: {
+  //         'Content-Type': 'application/json',
+  //       },
+  //     });
+
+  //     const result = await response.json();
+
+  //     const appVersion = DeviceInfo.getVersion();
+  //     // const appVersion = "0.1";
+  //     const packageName = DeviceInfo.getBundleId();
+  //     const playStoreUrl = `https://play.google.com/store/apps/details?id=${packageName}`;
+  //     const latest_version = result.latest_version
+  //     const critical_version = result.critical_version
+
+  //     // FORCE UPDATE
+  //     if (compareVersions(appVersion, critical_version) === -1) {
+  //       Alert.alert(
+  //         "Update Required",
+  //         "You must update the app to continue using it.",
+  //         [
+  //           {
+  //             text: "Update",
+  //             onPress: () => Linking.openURL(playStoreUrl),
+  //           },
+  //         ],
+  //         { cancelable: false }
+  //       );
+  //       return;
+  //     }
+
+  //     // OPTIONAL UPDATE
+  //     if (compareVersions(appVersion, latest_version) === -1) {
+  //       Alert.alert(
+  //         "Update Available",
+  //         "A new version of the app is available.",
+  //         [
+  //           { text: "Later", style: "cancel" },
+  //           {
+  //             text: "Update",
+  //             onPress: () => Linking.openURL(playStoreUrl),
+  //           },
+  //         ]
+  //       );
+  //     }
+
+  //     if (!response.ok) {
+  //       // API error message
+  //       Dialog.show({
+  //         type: ALERT_TYPE.DANGER,
+  //         title: 'Error',
+  //         textBody: result.message || 'Login failed',
+  //         button: 'close',
+  //       });
+
+  //       return;
+  //     }
+
+  //     // If the user login for the first time
+
+  //     if (result.status !== "Success") {
+  //       Dialog.show({
+  //         type: ALERT_TYPE.WARNING,
+  //         title: 'Warning',
+  //         textBody: 'Device Id missing. PLease Verify',
+  //         button: 'close',
+  //         autoClose: 500,
+  //       });
+
+  //       // await AsyncStorage.setItem('loginDetails', JSON.stringify(result));
+
+  //       navigation.navigate('OTP', { data: result });
+
+  //       return;
+  //     }
+
+  //     console.log('Login success:', result);
+
+  //     await AsyncStorage.setItem('loginDetails', JSON.stringify(result));
+
+  //     const hasLocationPermission = await requestLocationPermission();
+
+  //     if (!hasLocationPermission) {
+  //       Dialog.show({
+  //         type: ALERT_TYPE.WARNING,
+  //         title: 'Permission Required',
+  //         textBody: 'Location permission is required to continue.',
+  //         button: 'close',
+  //       });
+  //       return; // stop navigation
+  //     }
+
+  //     Dialog.show({
+  //       type: ALERT_TYPE.SUCCESS,
+  //       title: 'Success',
+  //       textBody: 'Login Successfull',
+  //       button: 'close',
+  //       autoClose: 500,
+  //     });
+
+  //     setEmail('');
+  //     setPassword('');
+
+  //     setTimeout(() => {
+  //       // Add Home to history
+  //       addToHistory('HomeStack', 'Home');
+
+  //       // Navigate to Home
+  //       (navigation as any).navigate('MainTabs', {
+  //         screen: 'HomeStack',
+  //         params: { screen: 'Home' },
+  //       });
+  //     }, 1000);
+  //   } catch (error) {
+  //     console.error('Login error:', error);
+  //     Dialog.show({
+  //       type: ALERT_TYPE.DANGER,
+  //       title: 'Error',
+  //       textBody: 'Something went wrong. Please try again.',
+  //       button: 'close',
+  //     });
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
 
   const handleForgotPassword = async () => {
     navigation.navigate('ChangePassword')

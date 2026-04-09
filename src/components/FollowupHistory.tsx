@@ -47,6 +47,8 @@ const FollowupHistory = () => {
       tenant_id: user?.tenant_id,
       branch_id: user?.branch_id,
       lead_management_id: data?.lead_id,
+      employee_id: user?.employee_id,
+      user_id: user?.logged_user_id,
     }
 
     try {

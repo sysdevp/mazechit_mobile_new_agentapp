@@ -112,6 +112,7 @@ const BeforeEnrollment = () => {
       branch_id: userData?.branch_id,
       customer_id: data?.customer_id,
       employee_id: userData?.employee_id,
+      user_id: userData?.logged_user_id,
       received_date: Date.now(),
       amount,
       payment_type_id: mode,

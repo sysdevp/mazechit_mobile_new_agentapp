@@ -24,6 +24,7 @@ const OFFLINE_RECEIPTS_KEY = 'offline_receipts';
 const Collection = () => {
   const [search, setSearch] = useState('');
   const navigation = useNavigation<any>();
+  const [user, setUser] = useState<any>();
   const [userId, setUserId] = useState('');
   const [statsData, setStatsData] = useState<any[]>([]);
   const [collection, setCollection] = useState<any[]>([]);
@@ -43,6 +44,7 @@ const Collection = () => {
       (await AsyncStorage.getItem('loginDetails')) ?? '{}',
     );
     setUserId(value?.tenant_id);
+    setUser(value);
   };
 
   // ---------------- Fetch collections (Offline First) ----------------
@@ -52,6 +54,8 @@ const Collection = () => {
     const payload = {
       db: DbName,
       tenant_id: userId,
+      employee_id: user?.employee_id,
+      user_id: user?.logged_user_id,
     };
 
     try {
@@ -59,7 +63,7 @@ const Collection = () => {
       const response = await axios.get(
         `${baseUrl}/mobile-get-collection-area-customers-new`,
         { params: payload },
-      );
+      );  
 
       const res = response.data ?? [];
 
@@ -129,6 +133,8 @@ const Collection = () => {
     const payload = {
       db: DbName,
       tenant_id: userId,
+      employee_id: user?.employee_id,
+      user_id: user?.logged_user_id,
     };
 
     try {

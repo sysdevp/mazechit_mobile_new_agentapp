@@ -16,10 +16,16 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import axios from 'axios';
 import { useFocusEffect } from '@react-navigation/native';
 import CustomDropdownBottom from '../custom/CustomDropdownBottom';
+import Modal from 'react-native-modal';
+import CustomDropdown from '../custom/CustomDropdown';
 
 const DayClosingReport = () => {
   const [date, setDate] = useState<Date>(new Date());
   const [showDatePicker, setDatePicker] = useState(false);
+
+  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [tempDate, setTempDate] = useState<Date>(new Date());
+  const [tempBranch, setTempBranch] = useState('');
 
   const [search, setSearch] = useState<string>('');
   const [openingBalance, setOpeningBalance] = useState<string>('0');
@@ -28,8 +34,10 @@ const DayClosingReport = () => {
   const [totalDebit, setTotalDebit] = useState<string>('0');
   const [totalCredit, setTotalCredit] = useState<string>('0');
 
-  const [branchData, setBranchData] = useState<any[]>();
+  const [branchData, setBranchData] = useState<any[]>([]);
+  const [employeeData, setEmployeeData] = useState<any[]>([]);
   const [branch, setBranch] = useState('');
+  const [employee, setEmployee] = useState<any>(null);
 
   const transactions = [
     {
@@ -64,15 +72,20 @@ const DayClosingReport = () => {
     if (selectedDate) setDate(selectedDate);
   };
 
-  const [user, setUser] = useState<any[]>();
-  const [dayReport, setDayReport] = useState<any[]>();
+  const onTempDateChange = (event: any, selectedDate?: Date) => {
+    setDatePicker(false);
+    if (selectedDate) setTempDate(selectedDate);
+  };
+
+  const [user, setUser] = useState<any>(null);
+  const [dayReport, setDayReport] = useState<any>(null);
 
   const baseUrl = COMMON.BaseUrl;
   const dataBase = COMMON.DbName;
 
   //  --- Format Date ---
 
-  const formatDate = date => {
+  const formatDate = (date: Date | string | number) => {
     const d = new Date(date);
     const year = d.getFullYear();
     const month = (d.getMonth() + 1).toString().padStart(2, '0');
@@ -84,13 +97,48 @@ const DayClosingReport = () => {
 
   //  --- user details getch ---
 
-  const userData = async () => {
-    const value = JSON.parse(
-      (await AsyncStorage.getItem('loginDetails')) ?? '{}',
-    );
+  // const userData = async () => {
+  //   const value = JSON.parse(
+  //     (await AsyncStorage.getItem('loginDetails')) ?? '{}',
+  //   );
 
-    console.log(value);
-    setUser(value);
+  //   console.log(value);
+  //   setUser(value);
+  // };
+
+  const userData = async () => {
+    try {
+      const stored = await AsyncStorage.getItem('loginDetails') ?? '{}';
+      const employeeData = await AsyncStorage.getItem('employeeData') ?? '{}';
+      const branchData = await AsyncStorage.getItem('branchData') ?? '{}';
+      const value = stored ? JSON.parse(stored) : {};
+
+      const branchList = branchData ? JSON.parse(branchData) : [];
+      const employeeList = employeeData ? JSON.parse(employeeData) : [];
+
+      setUser(value);
+
+      console.log(employeeList, "employeeList", branchList, "branchList", value);
+
+      setBranchData([
+        { label: 'All', value: '' },
+        ...branchList.map((b: any) => ({
+          label: b.branch_name,
+          value: b.branch_id,
+        })),
+      ]);
+
+      setEmployeeData([
+        { label: 'All', value: '' },
+        ...employeeList.map((e: any) => ({
+          label: `${e.first_name} - ${e.last_name}`,
+          value: e.employee_id,
+        })),
+      ]);
+
+    } catch (err) {
+      console.error('Error parsing loginDetails', err);
+    }
   };
 
   // --- Branch list ---
@@ -126,6 +174,8 @@ const DayClosingReport = () => {
       branch_id: branch,
       account_date: account_date,
       // account_date: "2026-01-13",
+      user_id: user?.logged_user_id,
+      employee_id: employee,
     };
 
     try {
@@ -141,7 +191,7 @@ const DayClosingReport = () => {
         }
         return sum;
       }, 0);
-      
+
       const totalCredit = res.data.reduce((sum: number, t: any) => {
         if (t.type === 'credit') {
           const amount = Number(t.amount ?? 0);
@@ -149,9 +199,9 @@ const DayClosingReport = () => {
         }
         return sum;
       }, 0);
-      
+
       setDayReport(res);
-      setTotalDebit(totalDebit);[]
+      setTotalDebit(totalDebit);
       setTotalCredit(totalCredit);
       setOpeningBalance(res.opening_balance)
       setClosingBalance(res.closing_balance)
@@ -175,7 +225,7 @@ const DayClosingReport = () => {
   useFocusEffect(
     useCallback(() => {
       fetchDayClosing();
-    }, [user, branch, date])
+    }, [user])
   );
 
   return (
@@ -191,46 +241,107 @@ const DayClosingReport = () => {
           value={search}
           onChangeText={setSearch}
         />
+        <Pressable
+          onPress={() => {
+            setTempDate(date);
+            setTempBranch(branch);
+            setEmployee(employee);
+            setFilterModalVisible(true);
+          }}
+        >
+          <Icon name="filter" size={22} color="#666" />
+        </Pressable>
       </View>
 
-      <View>
-        <View style={styles.dateRow}>
-          <View
-            style={styles.datePickerButtonSmallCotainer}
+      {/* FILTER MODAL */}
+      <Modal
+        isVisible={filterModalVisible}
+        onBackdropPress={() => setFilterModalVisible(false)}
+        style={styles.modal}
+      >
+        <View style={styles.modalContent}>
+          <Pressable
+            style={styles.closeButton}
+            onPress={() => setFilterModalVisible(false)}
+            hitSlop={{ top: 15, bottom: 15, left: 20, right: 20 }}
           >
-            <Text style={styles.label}>Date</Text>
+            <Icon name="close" size={24} color="#fff" />
+          </Pressable>
 
+          <Text style={styles.modalTitle}>Filter</Text>
+
+          <Text style={styles.sectionLabel}>Date</Text>
+          <View style={styles.dateRow}>
             <Pressable
-              style={styles.datePickerButtonSmall}
+              style={styles.datePickerButton}
               onPress={() => setDatePicker(true)}
             >
               <Icon name="calendar-outline" size={18} color="#fff" />
-              <Text style={styles.datePickerTextSmall}>
-                {date ? date.toDateString() : 'Select Date'}
+              <Text style={styles.dateText}>
+                {tempDate ? tempDate.toDateString() : 'Select Date'}
               </Text>
             </Pressable>
           </View>
 
-          {/* BRANCH DROPDOWN */}
-          <CustomDropdownBottom
-            label="Branch"
-            placeholder="Select the Branch"
-            value1={branch}
-            items={branchData}
-            onChangeValue={(v: string | null) => {
-              setBranch(v || '');
-            }}
-          />
+          {showDatePicker && (
+            <DateTimePicker
+              value={tempDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={onTempDateChange}
+            />
+          )}
+
+          {branchData?.length > 1 && (
+            <CustomDropdown
+              label="Branch"
+              placeholder="Select the Branch"
+              value1={tempBranch}
+              items={branchData}
+              onChangeValue={(v: string | null) => setTempBranch(v || '')}
+            />
+          )}
+
+          {employeeData?.length > 1 && (
+            <CustomDropdown
+              label="Employee"
+              placeholder="Select Employee"
+              value1={employee}
+              items={employeeData}
+              onChangeValue={(v: string | null) => setEmployee(v || '')}
+            />
+          )}
+
+          <View style={styles.buttonRow}>
+            <Pressable
+              style={styles.clearButton}
+              onPress={() => {
+                const defaultDate = new Date();
+                setTempDate(defaultDate);
+                setTempBranch('');
+                setDate(defaultDate);
+                setBranch('');
+                setEmployee('');
+                setFilterModalVisible(false);
+              }}
+            >
+              <Text style={styles.clearText}>Clear</Text>
+            </Pressable>
+
+            <Pressable
+              style={styles.applyButton}
+              onPress={() => {
+                setDate(tempDate);
+                setBranch(tempBranch);
+                setEmployee(employee);
+                setFilterModalVisible(false);
+              }}
+            >
+              <Text style={styles.applyText}>Filter</Text>
+            </Pressable>
+          </View>
         </View>
-        {showDatePicker && (
-          <DateTimePicker
-            value={date || new Date()}
-            mode="date"
-            display="default"
-            onChange={onDateChange}
-          />
-        )}
-      </View>
+      </Modal>
 
       <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
         {/* Opening Balance */}
@@ -261,12 +372,12 @@ const DayClosingReport = () => {
           {/* Rows */}
           {dayReport?.data?.length > 0 ? (
             dayReport?.data
-              .filter(item =>
+              .filter((item: any) =>
                 item.receipt_no
                   ?.toLowerCase()
                   .includes(search?.toLowerCase())
               )
-              .map((row, index) => (
+              .map((row: any, index: number) => (
                 <View key={index} style={styles.tableRow}>
                   <View style={styles.tableCellWrapper}>
                     <Text style={styles.tableCell}>{row.receipt_no}</Text>
@@ -383,6 +494,27 @@ const styles = StyleSheet.create({
     color: '#000',
     fontSize: 14,
   },
+  modal: { justifyContent: 'flex-end', margin: 0 },
+  modalContent: {
+    backgroundColor: '#0A5E6A',
+    padding: 20,
+    borderTopLeftRadius: 20,
+    borderTopRightRadius: 20,
+  },
+  closeButton: { position: 'absolute', top: 15, right: 15, zIndex: 10 },
+  modalTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    marginBottom: 15,
+    textAlign: 'center',
+    color: '#fff',
+  },
+  sectionLabel: {
+    fontSize: 12,
+    fontWeight: '500',
+    marginBottom: 5,
+    color: '#ccc',
+  },
   balanceBox: {
     backgroundColor: 'rgba(255,255,255,0.08)',
     padding: 12,
@@ -428,6 +560,15 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     marginBottom: 15,
   },
+  datePickerButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ffffff33',
+    padding: 10,
+    borderRadius: 12,
+    flex: 1,
+  },
+  dateText: { color: '#fff', marginLeft: 8 },
   datePickerButtonSmall: {
     // flex: 1,
     flexDirection: 'row',
@@ -472,6 +613,30 @@ const styles = StyleSheet.create({
     fontSize: 14,
     marginBottom: 6,
   },
+  buttonRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginTop: 10,
+  },
+  clearButton: {
+    flex: 1,
+    backgroundColor: 'transparent',
+    borderWidth: 1,
+    borderColor: '#fff',
+    padding: 12,
+    borderRadius: 12,
+    marginRight: 8,
+    alignItems: 'center',
+  },
+  clearText: { color: '#fff', fontWeight: '600', fontSize: 14 },
+  applyButton: {
+    flex: 1,
+    backgroundColor: '#235DFF',
+    padding: 12,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  applyText: { color: '#fff', fontWeight: '600', fontSize: 14 },
 });
 
 export default DayClosingReport;

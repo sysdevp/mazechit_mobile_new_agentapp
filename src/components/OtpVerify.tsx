@@ -80,6 +80,7 @@ const OtpUIFunc = () => {
     const payload = {
       db: dataBase,
       user_id: data?.user_id,
+      // user_id: ?.logged_user_id,
       device_primary_id: data?.device_primary_id,
     };
 

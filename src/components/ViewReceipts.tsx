@@ -187,6 +187,7 @@ const ViewReceipts = () => {
       db: dataBase,
       tenant_id: user?.tenant_id,
       employee_id: user?.employee_id ,
+      user_id: user?.logged_user_id,
       branch_id: branch,
       group_id: group,  
       start_date: start_date,

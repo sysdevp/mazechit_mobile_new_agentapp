@@ -17,6 +17,7 @@ interface HeaderProps {
   notifications?: any;
   setNotifications?: any;
   userName?: any;
+  setFilterModalVisible?: any;
 }
 
 const Header: React.FC<HeaderProps> = ({
@@ -27,7 +28,8 @@ const Header: React.FC<HeaderProps> = ({
   customBackAction,
   setNotifications,
   notifications,
-  userName
+  userName,
+  setFilterModalVisible
 }) => {
   const navigation = useNavigation<any>();
   const { getPreviousScreen } = useNavigationHistory();
@@ -177,6 +179,10 @@ const Header: React.FC<HeaderProps> = ({
       </View>
 
       {isDashboard && !rightButton && (
+        <View style={styles.filterWrapper}>
+        <TouchableOpacity onPress={() => setFilterModalVisible(true)}>
+          <Ionicons name="filter-sharp" size={24} color="#fff" />
+        </TouchableOpacity>
         <TouchableOpacity
           ref={bellRef}
           onPress={() => {
@@ -203,6 +209,7 @@ const Header: React.FC<HeaderProps> = ({
             </View>
           )}
         </TouchableOpacity>
+        </View>
       )}
 
 
@@ -433,6 +440,10 @@ const styles = StyleSheet.create({
     color: '#fff',
     textAlign: 'center',
     fontWeight: '600',
+  },
+  filterWrapper: {
+    flexDirection: 'row',
+    gap: 10,
   },
 });
 

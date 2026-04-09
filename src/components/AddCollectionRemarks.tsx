@@ -85,6 +85,7 @@ const AddCollectionRemarks = () => {
       branch_id: userData?.branch_id,
       customer_id: data?.customer_id,
       employee_id: userData?.employee_id,
+      user_id: userData?.logged_user_id,
       remarks: feedback,
       remark_time: 1,
       remark_date: remark_date,
