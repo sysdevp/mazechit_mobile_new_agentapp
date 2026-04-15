@@ -8,7 +8,7 @@ const COMMON = {
   // BaseUrl: 'http://bestgroups.in/bestchit/backend/api',
 
 
-  // best_chits
+  // best_chits 
   // BaseUrl: 'https://mazechit.in/bestchit/backend/api',
   // DbName: 'best_chits',
   // ClientApName: 'Best Chits'
@@ -26,9 +26,14 @@ const COMMON = {
   //   ClientApName: 'Divina Chits'
 
   // Satheesh Balaji
-    // DbName: 'satheesh_balaji',
-    // BaseUrl: 'https://mazechit.in/satheesh_balaji/backend/api',
-    // ClientApName: 'Satheesh Balaji Business'
+  // DbName: 'satheesh_balaji',
+  // BaseUrl: 'https://mazechit.in/satheesh_balaji/backend/api',
+  // ClientApName: 'Satheesh Balaji Business'
+
+  // SPN Chits
+  // DbName: 'spn_chits',
+  // BaseUrl: 'https://srispnchitfunds.com/app/backend/api',
+  // ClientApName: 'Sri SPN Chits'
 };
 
 export default COMMON;

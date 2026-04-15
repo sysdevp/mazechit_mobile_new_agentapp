@@ -187,8 +187,8 @@ export default function LoginScreen() {
       console.log("Login success:", result);
 
       await AsyncStorage.setItem("loginDetails", JSON.stringify(result));
-      await AsyncStorage.setItem("branchList", JSON.stringify(result?.branch_list));
-      await AsyncStorage.setItem("employeeList", JSON.stringify(result?.employee_list));
+      // await AsyncStorage.setItem("branchList", JSON.stringify(result?.branch_list));
+      // await AsyncStorage.setItem("employeeList", JSON.stringify(result?.employee_list));
 
       const hasLocationPermission = await requestLocationPermission();
 
@@ -235,7 +235,7 @@ export default function LoginScreen() {
     } finally {
       setIsLoading(false);
     }
-  };
+    };
 
   // const handleSubmitOld = async () => {
   //   setIsLoading(true);

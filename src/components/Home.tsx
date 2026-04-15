@@ -164,6 +164,7 @@ const Home = () => {
     return 0;
   };
 
+  console.log(userId, "----------- userId test console home ------------")
   const isSafeVersion = async () => {
     setIsLoading(true);
 
@@ -231,7 +232,7 @@ const Home = () => {
     setUserName(value?.logged_user_name)
     setUserId(value?.logged_user_id);
     setTenantId(value?.tenant_id);
-    setBranchId(value?.branch_id)
+    // setBranchId(value?.branch_id)
   };
 
   useEffect(() => {
@@ -284,19 +285,38 @@ const Home = () => {
 
   // ========== Dashboard Details ==========
 
+  console.log(branch, " branch test console fetchDashboard home ------------")
   const fetchDashboard = async () => {
     setIsLoading(true);
 
+    // If refresh happens before state is populated, fall back to AsyncStorage.
+    let effectiveTenantId = tenantId;
+    let effectiveUserId = userId;
+    if (!effectiveUserId || !effectiveTenantId) {
+      try {
+        const raw = await AsyncStorage.getItem('loginDetails');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          effectiveUserId = parsed?.logged_user_id ?? effectiveUserId;
+          effectiveTenantId = parsed?.tenant_id ?? effectiveTenantId;
+          if (effectiveUserId && effectiveUserId !== userId) setUserId(effectiveUserId);
+          if (effectiveTenantId && effectiveTenantId !== tenantId) setTenantId(effectiveTenantId);
+        }
+      } catch (e) {
+        console.log('Failed to read loginDetails for dashboard', e);
+      }
+    }
+
     const payload = {
       db: DbName,
-      tenant_id: tenantId,
-      user_id: userId,
-      branch_id: branch,
+      tenant_id: effectiveTenantId,
+      user_id: effectiveUserId,
+      branch_id: branchId,
       group_id: group,
       employee_id: employee,
     };
 
-    const DASHBOARD_CACHE_KEY = `dashboard_cache_${userId}`;
+    const DASHBOARD_CACHE_KEY = `dashboard_cache_${effectiveUserId ?? ''}`;
 
     try {
       const response = await axios.post(
@@ -383,7 +403,7 @@ const Home = () => {
     }));
 
     const unsyncedCard = {
-      id: 3,
+      id: 4,
       title: 'Unsynced Receipts',
       amount: Unsynced,
       route: 'syncOfflineReceipts',
@@ -846,7 +866,7 @@ const Home = () => {
       });
 
       const res = response.data.cash_in_hand;
-      setCashInHand(res);
+      // setCashInHand(res);
 
       // await AsyncStorage.setItem('cashInHand', JSON.stringify(res));
 
@@ -888,13 +908,15 @@ const Home = () => {
   const onRefresh = useCallback(() => {
     setRefreshing(true);
 
+    console.log(userId, "Inside onRefresh home page ---------- userId test console ------------")
+
     // 🔁 API call / reload logic
     fetchDashboard();
 
     // setTimeout(() => {
     //   setRefreshing(false);
     // }, 2000);
-  }, []);
+  }, [userId, tenantId, branchId, group, employee]);
 
   // const fetchBranchData = async () => {
   //   const payload = {
@@ -994,21 +1016,23 @@ const Home = () => {
   }, [pre]);
 
   useEffect(() => {
-    // userData();
-    attendanceStatusFetch();
-    fetchBranch();
-    // fetchUsers()
-    fetchBanks();
-    fetchPaymentMode();
-    fetchSchemes();
-    fetchState();
-    fetchCities();
-    fetchDistrict();
-    fetchGroups();
-    fetchEmployees();
-    fetchStatus();
+    if (userId && tenantId) {
+      // userData();
+      attendanceStatusFetch();
+      fetchBranch();
+      // fetchUsers()
+      fetchBanks();
+      fetchPaymentMode();
+      fetchSchemes();
+      fetchState();
+      fetchCities();
+      fetchDistrict();
+      fetchGroups();
+      fetchEmployees();
+      fetchStatus();
 
-    // fetchDashboard();
+      // fetchDashboard();
+    }
   }, [userId, tenantId]);
 
   useFocusEffect(
@@ -1104,7 +1128,7 @@ const Home = () => {
         </ScrollView>
       )}
 
-<Modal
+      <Modal
         isVisible={filterModalVisible}
         onBackdropPress={() => setFilterModalVisible(false)}
         style={styles.modal}
@@ -1121,30 +1145,30 @@ const Home = () => {
 
           <Text style={styles.modalTitle}>Filter</Text>
           {/* {user?.role_type === 'Admin' && ( */}
-            <>
+          <>
 
-              {/* BRANCH DROPDOWN */}
-              <CustomDropdown
-                label="Branch"
-                placeholder="Select the Branch"
-                value1={branch}
-                items={branchData}
-                onChangeValue={(v: string | null) => {
-                  setBranch(v || '');
-                }}
-              />
+            {/* BRANCH DROPDOWN */}
+            <CustomDropdown
+              label="Branch"
+              placeholder="Select the Branch"
+              value1={branch}
+              items={branchData}
+              onChangeValue={(v: string | null) => {
+                setBranchId(v || '');
+              }}
+            />
 
-              {/* GROPU DROPDOWN */}
-              <CustomDropdown
-                label="Employee"
-                placeholder="Select the Employee"
-                value1={employee}
-                items={employeeData}
-                onChangeValue={(v: string | null) => {
-                  setEmployee(v || '');
-                }}
-              />
-            </>
+            {/* GROPU DROPDOWN */}
+            <CustomDropdown
+              label="Employee"
+              placeholder="Select the Employee"
+              value1={employee}
+              items={employeeData}
+              onChangeValue={(v: string | null) => {
+                setEmployee(v || '');
+              }}
+            />
+          </>
           {/* )} */}
           {/* BUTTONS */}
           <View style={styles.buttonRow}>
@@ -1163,7 +1187,7 @@ const Home = () => {
         </View>
       </Modal>
     </LinearGradient>
-  );  
+  );
 };
 
 export default Home;

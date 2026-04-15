@@ -191,11 +191,13 @@ const OfflineReceiptSync = () => {
 
       for (const receipt of receipts) {
         try {
-          await axios.post(
-            `${COMMON.BaseUrl}/mobile-add-receipt`,
-            null,
-            { params: receipt },
-          );
+          // await axios.post(
+          //   `${COMMON.BaseUrl}/mobile-add-receipt`,
+          //   null,
+          //   { params: receipt },
+          // );
+
+          await axios.post(`${COMMON.BaseUrl}/mobile-add-receipt`, receipt)
 
           syncedIds.push(receipt.offline_id);
         } catch (e) {
@@ -223,6 +225,7 @@ const OfflineReceiptSync = () => {
           textBody: `${syncedIds.length} report receipt(s) synced`,
           button: 'OK',
         });
+        navigation.goBack();
       }
     } catch (e) {
       console.log('Report sync error', e);

@@ -1,12 +1,12 @@
 /* ---- BUTTONS FIXED + CLEAN UI ---- */
 
-import React, { useEffect, useState } from 'react';
+import React, { useCallback, useEffect, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 import LinearGradient from 'react-native-linear-gradient';
 import Header from './Header';
 import DeviceInfo from 'react-native-device-info';
 import MaterialIcons from 'react-native-vector-icons/MaterialIcons';
-import { useNavigation } from '@react-navigation/native';
+import { useFocusEffect, useNavigation } from '@react-navigation/native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { ALERT_TYPE, Dialog } from 'react-native-alert-notification';
 import ProfileSkeleton from './loaders/ProfileSkeleton';
@@ -28,7 +28,7 @@ const Profile = () => {
       (await AsyncStorage.getItem('loginDetails')) ?? '{}',
     );
 
-    console.log(value);
+    console.log(value, "profile page user data");
     setUser(value);
   };
 
@@ -37,18 +37,45 @@ const Profile = () => {
     console.log('Change Password Clicked');
   };
 
+  // const handleLogout = async () => {
+  //   setIsLoading(true);
+
+  //   try {
+  //     await AsyncStorage.removeItem('loginDetails');
+  //     Dialog.show({
+  //       type: ALERT_TYPE.SUCCESS,
+  //       title: 'Success',
+  //       textBody: 'Logged out successfully',
+  //       button: 'close',
+  //     });
+  //     navigation.navigate('Login');
+  //   } catch (err) {
+  //     console.log('Error while Logout', err);
+  //   } finally {
+  //     setIsLoading(false);
+  //   }
+  // };
+
   const handleLogout = async () => {
     setIsLoading(true);
-
+  
     try {
+      // Clear auth data so UI can't reuse previous session
       await AsyncStorage.removeItem('loginDetails');
+      setUser('');
+  
       Dialog.show({
         type: ALERT_TYPE.SUCCESS,
         title: 'Success',
         textBody: 'Logged out successfully',
-        button: 'close',
+        button: 'Close',
       });
-      navigation.navigate('Login');
+  
+      // Reset stack so old screens unmount
+      navigation.reset({
+        index: 0,
+        routes: [{ name: 'Login' }],
+      });
     } catch (err) {
       console.log('Error while Logout', err);
     } finally {
@@ -59,6 +86,13 @@ const Profile = () => {
   useEffect(() => {
     userData();
   }, [])
+
+  // Re-fetch when screen becomes active (handles logout/login without app restart)
+  useFocusEffect(
+    useCallback(() => {
+      userData();
+    }, []),
+  );
 
   if (isLoading || user === '') {
     return <ProfileSkeleton />;

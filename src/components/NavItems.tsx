@@ -25,7 +25,7 @@ const routeNameToLabel: Record<string, string> = {
 const NavItems = ({ navigation, state }: DrawerContentComponentProps) => {
   const [selected, setSelected] = React.useState('Dashboard');
   const [isEnabled, setIsEnabled] = React.useState(false);
-  const [user, setUser] = React.useState();
+  const [user, setUser] = React.useState<any>(undefined);
   const hasFetchedUser = React.useRef(false);
 
   const { addToHistory } = useNavigationHistory();
@@ -120,7 +120,13 @@ const NavItems = ({ navigation, state }: DrawerContentComponentProps) => {
       button: 'close',
     });
     await AsyncStorage.removeItem('loginDetails');
-    navigation.navigate('Login');
+    setUser(undefined);
+    hasFetchedUser.current = false;
+    // Reset the navigation state so previous user screens unmount
+    navigation.reset({
+      index: 0,
+      routes: [{ name: 'Login' }],
+    });
     navigation.closeDrawer();
   };
 
@@ -143,24 +149,35 @@ const NavItems = ({ navigation, state }: DrawerContentComponentProps) => {
   const userData = React.useCallback(async () => {
     try {
       const raw = await AsyncStorage.getItem('loginDetails');
-      if (raw) {
-        const parsed = JSON.parse(raw);
-        setUser(parsed);
-        hasFetchedUser.current = true;
+      if (!raw) {
+        setUser(undefined);
+        hasFetchedUser.current = false;
+        return;
       }
+
+      const parsed = JSON.parse(raw);
+      setUser(parsed);
+      hasFetchedUser.current = true;
     } catch (error) {
       console.error('Failed to load user data:', error);
     }
   }, []);
 
-  // useFocusEffect ensures data is re-fetched when drawer becomes visible
-  useFocusEffect(
-    React.useCallback(() => {
-      if (!hasFetchedUser.current) {
-        userData();
-      }
-    }, [userData])
-  );
+  // Refresh when the drawer navigator switches screens (Login <-> MainTabs)
+  useEffect(() => {
+    userData();
+  }, [state?.index, userData]);
+
+  // Refresh when drawer opens / navigator focuses (more reliable for drawerContent)
+  useEffect(() => {
+    const navAny = navigation as any;
+    const unsubOpen = navAny.addListener?.('drawerOpen', userData) ?? (() => {});
+    const unsubFocus = navAny.addListener?.('focus', userData) ?? (() => {});
+    return () => {
+      unsubOpen();
+      unsubFocus();
+    };
+  }, [navigation, userData]);
 
   console.log(user, "User Data From Nav Items components")
 

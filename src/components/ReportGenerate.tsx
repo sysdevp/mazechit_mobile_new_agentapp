@@ -490,11 +490,12 @@ const ReportGenerate = () => {
     console.log('Payload Data of the Report Generate', payload);
 
     try {
-      const response = await axios.post(
-        `${baseUrl}/mobile-add-receipt`,
-        null,
-        { params: payload },
-      );
+      // const response = await axios.post(
+      //   `${baseUrl}/mobile-add-receipt`,
+      //   null,
+      //   { params: payload },
+      // );
+      const response = await axios.post(`${baseUrl}/mobile-add-receipt`, payload)
 
       const res = response.data
 
@@ -521,7 +522,7 @@ const ReportGenerate = () => {
       console.log('FULL RESPONSE:', res);
 
     }catch (error: any) {
-      console.log(error);
+      console.log(error, "error test console report generate");
     
       // ✅ Network error (no internet)
       if (!error.response) {
